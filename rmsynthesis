@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+
+from getopt import gnu_getopt as getopt
+import os,sys
+import pyfits
+from numpy import *
+
+
+def main(argv):
+    return 0
+
+
+
+if __name__ == "__main__":
+    main(sys.argv)
