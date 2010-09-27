@@ -43,6 +43,9 @@ rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
   -f/--force                 Force overwriting files in output
                              directory if they already exist.
 
+  -c/--check                 Perform all possible checks, but do not
+                             write any files or compute an RM cube.
+
 
 Input
 -----
