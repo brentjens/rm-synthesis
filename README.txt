@@ -35,10 +35,13 @@ rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
   
   -d/--dphi <delta phi>      Faraday depth increment between frames
                              from the RM cube. Default value is
-                             2sqrt(3)/Delta (lambda^2), where Delta
+                             sqrt(3)/Delta (lambda^2), where Delta
                              (lambda^2) is max(lambda^2) -
                              min(lambda^2), computed from the
                              frequency list.
+
+  -f/--force                 Force overwriting files in output
+                             directory if they already exist.
 
 
 Input
@@ -75,7 +78,7 @@ otherwise specified with the -o option.
                       Faraday depth (AXIS3)
 
 - rmsf.txt            Text file with the RM spread function. The first
-                      column is Faraday depth, the second column teh
+                      column is Faraday depth, the second column the
                       response parallel to the original polarization
                       direction ("q"), and the third column the
                       response at 45 degrees with respect to the

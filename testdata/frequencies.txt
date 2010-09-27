@@ -1,0 +1,12 @@
+314.159265e6
+314.359265e6
+320e6
+330e6 #Extra comments
+340000000
+
+# Some empty lines
+
+350e6
+3.6e8
+    
+3.7e8

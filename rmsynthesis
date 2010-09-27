@@ -1,15 +1,194 @@
 #!/usr/bin/env python
 
 from getopt import gnu_getopt as getopt
+from getopt import GetoptError
 import os,sys
-import pyfits
-from numpy import *
+
+from rmsynthesismain import *
+
+
+def print_summary(argv, **kwargs):
+    W=15
+    def prkv(key, value):
+        print key.ljust(W)+': '+str(value)
+        pass
+    
+    print ''
+    print 'RM synthesis summary'
+    print '--------------------'
+    print ''
+    print 'Command'.ljust(W)+': '+' '.join(argv)
+    print u'Working dir'.ljust(W)+u': '+os.getcwdu()
+    print ''
+
+    prkv('Q cube', kwargs['qname'])
+    prkv('U cube', kwargs['uname'])
+    prkv('Frequencies', kwargs['frequencyname'])
+    prkv('Output dir', kwargs['output_dir'])
+    prkv('Force overwrite', kwargs['force_overwrite'])
+    print ''
+    prkv('Low phi', kwargs['low_phi'])
+    prkv('High phi', kwargs['high_phi'])
+    prkv('Delta phi', kwargs['dphi'])
+    print ''
+    prkv('RM cube', kwargs['rmcube_name'])
+    prkv('RMSF', kwargs['rmsf_name'])
+    prkv('Log file', kwargs['log_name'])
+    pass
+
+
+def print_help():
+    print """Usage
+-----
+
+rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
+
+  -o/--output <directory>    Output directory (Default: .)
+
+  -l/--low <phi>             Lowest Faraday depth in output cube.
+                             Default value is 
+                             -sqrt(3)/delta (lambda^2),
+                             where delta (lambda^2) is the smallest
+                             one as computed from the frequency list.
+
+  -h/--high <phi>            Highest Faraday depth in output cube.
+                             Default value is 
+                             +sqrt(3)/delta (lambda^2),
+                             where delta (lambda^2) is the smallest
+                             one computed from the frequency list.
+  
+  -d/--dphi <delta phi>      Faraday depth increment between frames
+                             from the RM cube. Default value is
+                             sqrt(3)/Delta (lambda^2), where Delta
+                             (lambda^2) is max(lambda^2) -
+                             min(lambda^2), computed from the
+                             frequency list.
+
+  -f/--force                 Force overwriting files in output
+                             directory if they already exist.
+
+Input
+-----
+
+The Q and U fits cubes are required and must have three axes. The
+fastest varying axis (AXIS1) must be right ascension, the second axis
+(AXIS2) declination, and the slowest varying axis (AXIS3) is the frame
+number. The rmsynthesis script ignores frequency information in the
+FITS cubes. It only uses frequency information provided in the text
+file. Note that the order of the axes in Python/numpy is the reverse
+of that in the FITS file. That is, in Python, the first axis (axis 0)
+is the slowest varying axis. The pyfits library transparently handles
+this conversion. Note that the Q and U cubes must be similar in the
+sense that their shape and scales (ra, dec, and frame number) must be
+the same.
+
+The third required input is the list of frequencies. This must be a
+text file with one frequency per line. The frequency must be in Hz and
+can be either an integer or a floating point number. A (tiny) example:
+
+1.420e9
+1680000000
+4800000000
+
+
+Output
+------
+
+The output files are written in the current working directory, unless
+otherwise specified with the -o option. 
+
+- rmcube-dirty.fits   FITS cube with axis RA (AXIS1), Dec (AXIS2),
+                      Faraday depth (AXIS3)
+
+- rmsf.txt            Text file with the RM spread function. The first
+                      column is Faraday depth, the second column the
+                      response parallel to the original polarization
+                      direction ("q"), and the third column the
+                      response at 45 degrees with respect to the
+                      original polarization direction ("u").
+
+- rmsynthesis.log     Contains the command line options used to obtain
+                      this output.
+"""
+    return -1
 
 
 def main(argv):
+    if len(argv) == 1:
+        return print_help()
+    options, arguments=getopt(sys.argv[1:],
+                              'o:l:h:d:f',
+                              ['output=',
+                               'low=',
+                               'high=',
+                               'dphi=',
+                               'force'])
+    if len(arguments) != 3:
+        raise GetoptError('please provide a Q FITS cube, a U fits cube, and a text file with frequencies')
+
+    files_exist=map(ensure_exists, arguments)
+    if not all(files_exist):
+        print 'please provide a Q FITS cube, a U fits cube, and a text file with frequencies'
+        return -1
+    
+    qname,uname,frequencyname = arguments
+    
+    frequencies=parse_frequency_file(frequencyname)
+    wl2 = as_wavelength_squared(frequencies)
+    sorted_wl2 = array(sorted(wl2))
+    smallest_dl2=min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
+    if abs(smallest_dl2) == 0.0:
+        print 'error: two frames have equal frequency'
+        return -1
+    
+    # Default values
+    
+    output = '.'
+    low    = -sqrt(3)/smallest_dl2
+    high   = +sqrt(3)/smallest_dl2
+    dphi   = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
+    force_overwrite=False
+
+    
+    for (option, value) in options:
+        print option
+        if   option in ['-o', '--output']:
+            output = value
+        elif option in ['-l', '--low']:
+            low=float(value)
+        elif option in ['-h', '--high']:
+            high=float(value)
+        elif option in ['-d', '--dphi']:
+            dphi=float(value)
+        elif option in ['-f', '--force']:
+            force_overwrite = True
+        pass # for...
+
+    rmcube_name = output+'/rmcube-dirty.fits'
+    rmsf_name   = output+'/rmsf.txt'
+    log_name    = output+'/rmsynthesis.log'
+
+    print_summary(argv,
+                  qname=qname, uname=uname,
+                  frequencyname=frequencyname,
+                  output_dir=output,
+                  low_phi=low, high_phi=high, dphi=dphi,
+                  force_overwrite=force_overwrite,
+                  rmcube_name=rmcube_name,
+                  rmsf_name=rmsf_name,
+                  log_name=log_name)
+                  
     return 0
 
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    try:
+        main(sys.argv)
+    except GetoptError as e:
+        print 'error: '+e
+        print 'use "'+sys.argv[0]+'" for help.'
+    except OSError as e:
+        print e
+    except ParseError as e:
+        print e
