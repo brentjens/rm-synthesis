@@ -77,8 +77,14 @@ Output
 The output files are written in the current working directory, unless
 otherwise specified with the -o option. 
 
-- rmcube-dirty.fits   FITS cube with axis RA (AXIS1), Dec (AXIS2),
-                      Faraday depth (AXIS3)
+- p-rmcube-dirty.fits FITS cube with axis RA (AXIS1), Dec (AXIS2),
+                      Faraday depth (AXIS3). Total linear polarization.
+
+- q-rmcube-dirty.fits FITS cube with axis RA (AXIS1), Dec (AXIS2),
+                      Faraday depth (AXIS3). Derotated Q.
+
+- u-rmcube-dirty.fits FITS cube with axis RA (AXIS1), Dec (AXIS2),
+                      Faraday depth (AXIS3). Derotated U.
 
 - rmsf.txt            Text file with the RM spread function. The first
                       column is Faraday depth, the second column the

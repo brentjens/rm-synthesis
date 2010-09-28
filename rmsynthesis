@@ -120,6 +120,15 @@ otherwise specified with the -o option.
     return -1
 
 
+
+
+
+
+#
+#  MAIN routine 
+# 
+
+
 def main(argv):
     if len(argv) == 1:
         return print_help()
@@ -184,6 +193,8 @@ def main(argv):
     rmsf_name   = output+'/rmsf.txt'
     log_name    = output+'/rmsynthesis.log'
 
+    phi=arange(low, high, dphi)
+
 
     def summary():
         print_summary(argv,
@@ -199,7 +210,9 @@ def main(argv):
         pass
 
     summary()
-    
+
+    if not file_exists(output):
+        print 'output dir '+output+' does not yet exist; it will be created'
 
     if file_exists(log_name):
         if force_overwrite:
@@ -207,35 +220,52 @@ def main(argv):
         else:
             print 'file '+log_name+' already exists; use --force to overwrite'
             return -1
-    else:
+
+   if not proper_fits_shapes(qname, uname, frequencyname):
+        return -1
+
+    # Write log file
+    
+    if not check:
         if not file_exists(output):
-            print 'output dir '+output+' does not yet exist; it will be created'
-        if not check:
-            if not file_exists(output):
-                os.mkdir(output)
-            saveout=sys.stdout
-            sys.stdout=open(log_name, 'w')
-            summary()
-            sys.stdout.close()
-            sys.stdout=saveout
-            pass
+            os.mkdir(output)
+        saveout=sys.stdout
+        sys.stdout=open(log_name, 'w')
+        summary()
+        sys.stdout.close()
+        sys.stdout=saveout
         pass
-    phi_grid=arange(low, high, dphi)
-    #if not check:
-        # rmcube=rmsynthesis_dirty(qname, uname, frequencies, phi_grid)
-        # rmsf=compute_rmsf(frequencies, phi_grid)
+
+
+    # Finally, do the work...
+    
+    if not check:
+        qheader,qcube = get_fits_header_data(qname)
+        uheader,ucube = get_fits_header_data(uname)
+        rmcube=rmsynthesis_dirty(qcube, ucube, frequencies, phi)
+        write_rmcube(rmcube, qheader, output, force_overwrite)
         
+        rmsf=compute_rmsf(frequencies, phi)
+        write_rmsf(phi, rmsf, output)
+        pass
     return 0
+
 
 
 
 if __name__ == "__main__":
     try:
-        main(sys.argv)
+        exit(main(sys.argv))
     except GetoptError as e:
         print 'error: '+e
         print 'use "'+sys.argv[0]+'" for help.'
+        exit(-1)
     except OSError as e:
         print e
+        exit(-1)
     except ParseError as e:
         print e
+        exit(-1)
+    except ShapeError as e:
+        print e
+        exit(-1)
