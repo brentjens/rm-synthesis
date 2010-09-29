@@ -1,0 +1,5 @@
+README.txt
+setup.py
+bin/rmsynthesis
+rmsynthesis/__init__.py
+rmsynthesis/rmsynthesismain.py

@@ -2,7 +2,7 @@
 
 from distutils.core import setup
 
-setup(name='RM synthesis',
+setup(name='rmsynthesis',
       version='0.4',
       description='Simple Faraday rotation measure synthesis tool',
       author='Michiel Brentjens',
