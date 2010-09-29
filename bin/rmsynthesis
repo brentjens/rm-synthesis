@@ -4,7 +4,7 @@ from getopt import gnu_getopt as getopt
 from getopt import GetoptError
 import os,sys
 
-from rmsynthesismain import *
+from rmsynthesis import *
 
 
 def print_summary(argv, **kwargs):
