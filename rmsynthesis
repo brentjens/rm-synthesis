@@ -202,9 +202,9 @@ def main(argv):
             pass
         pass
     
-    rmcube_name = output+'/{p-,q-,u-}rmcube-dirty.fits'
-    rmsf_name   = output+'/rmsf.txt'
-    log_name    = output+'/rmsynthesis.log'
+    rmcube_name = os.path.join(output, '{p-,q-,u-}rmcube-dirty.fits')
+    rmsf_name   = os.path.join(output, 'rmsf.txt')
+    log_name    = os.path.join(output, 'rmsynthesis.log')
 
     phi=arange(low, high, dphi)
 

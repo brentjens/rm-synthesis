@@ -110,16 +110,22 @@ def write_fits_cube(data_array, fits_header, fits_name, force_overwrite=False):
 
 
 def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
-    write_fits_cube(abs(rmcube), fits_header, output_dir+'/p-rmcube-dirty.fits', force_overwrite=force_overwrite)
+    write_fits_cube(abs(rmcube), fits_header,
+                    os.path.join(output_dir, '/p-rmcube-dirty.fits'),
+                    force_overwrite=force_overwrite)
     
-    write_fits_cube(rmcube.real, fits_header, output_dir+'/q-rmcube-dirty.fits', force_overwrite=force_overwrite)
+    write_fits_cube(rmcube.real, fits_header,
+                    os.path.join(output_dir, '/q-rmcube-dirty.fits'),
+                    force_overwrite=force_overwrite)
     
-    write_fits_cube(rmcube.imag, fits_header, output_dir+'/u-rmcube-dirty.fits', force_overwrite=force_overwrite)
+    write_fits_cube(rmcube.imag, fits_header,
+                    os.path.join(output_dir, '/u-rmcube-dirty.fits'),
+                    force_overwrite=force_overwrite)
     pass
 
 
 def write_rmsf(phi, rmsf, output_dir):
-    rmsf_out=open(output_dir+'/rmsf.txt', 'w')
+    rmsf_out=open(os.path.join(output_dir, '/rmsf.txt'), 'w')
     for phi,y in zip(phi, rmsf):
         rmsf_out.write('%10.4f  %10.4f %10.4f\n' % (phi, real(y), imag(y)))
         pass
