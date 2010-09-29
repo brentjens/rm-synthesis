@@ -66,7 +66,7 @@ def proper_fits_shapes(qname, uname, frequencyname):
         pass
 
     if qh['NAXIS3'] != len(frequencies):
-            print 'number of frames in image cubes '+qname+' and '+uname+' ('+str(qh['NAXIS3'])+') not equal to number of frequencies in frequency file '+frequencyname+' ('+len(frequencies)+')'
+            print 'number of frames in image cubes '+qname+' and '+uname+' ('+str(qh['NAXIS3'])+') not equal to number of frequencies in frequency file '+frequencyname+' ('+str(len(frequencies))+')'
             ok=False
     return ok
         
@@ -77,11 +77,11 @@ def rmsynthesis_phases(wavelength_squared, phi):
 
 def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     wl2 = as_wavelength_squared(frequencies)
-    rmcube=zeros((len(phi), qcube.shape[1], qcube.shape[2]), dtype=complex64)
+    rmcube=zeros((len(phi_array), qcube.shape[1], qcube.shape[2]), dtype=complex64)
     wl2_0 = wl2.mean()
     p_complex= qcube+1j*ucube
     
-    n     = len(phi)
+    n     = len(phi_array)
     nfreq = len(frequencies)
     for i,phi in enumerate(phi_array):
         print 'processing frame '+str(i+1)+'/'+str(n)+' with phi = '+str(phi)

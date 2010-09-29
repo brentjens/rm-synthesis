@@ -166,7 +166,7 @@ def main(argv):
     dphi   = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
     force_overwrite=False
     check  = False
-
+    dphi_user_override=False
     
     for (option, value) in options:
         print option
@@ -178,6 +178,7 @@ def main(argv):
             high=float(value)
         elif option in ['-d', '--dphi']:
             dphi=float(value)
+            dphi_user_override=True
         elif option in ['-f', '--force']:
             force_overwrite = True
         elif option in ['-c', '--check']:
@@ -186,10 +187,16 @@ def main(argv):
 
     # Normalize dphi so that there is an integer number
     # of frames between low and high (inclusive)
-    frames = ceil((high-low)/dphi)
-    dphi= (high-low)*(1.0-1e-9)/(frames+1)
-
-    rmcube_name = output+'/rmcube-dirty.fits'
+    if not dphi_user_override:
+        if low < 0 and high > 0:
+            lowframes = ceil(abs(0-low)/dphi)
+            dphi= abs((0-low)*(1.0-1e-15)/(lowframes+1))
+        else:
+            ValueError('Low phi limit ('+str(low)+') must be negative and high phi limit ('+str(high)+') positive')
+            pass
+        pass
+    
+    rmcube_name = output+'/{p-,q-,u-}rmcube-dirty.fits'
     rmsf_name   = output+'/rmsf.txt'
     log_name    = output+'/rmsynthesis.log'
 
@@ -221,7 +228,7 @@ def main(argv):
             print 'file '+log_name+' already exists; use --force to overwrite'
             return -1
 
-   if not proper_fits_shapes(qname, uname, frequencyname):
+    if not proper_fits_shapes(qname, uname, frequencyname):
         return -1
 
     # Write log file
@@ -257,7 +264,7 @@ if __name__ == "__main__":
     try:
         exit(main(sys.argv))
     except GetoptError as e:
-        print 'error: '+e
+        print  e
         print 'use "'+sys.argv[0]+'" for help.'
         exit(-1)
     except OSError as e:
