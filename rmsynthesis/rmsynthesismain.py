@@ -1,7 +1,6 @@
 from  numpy import *
 import pyfits
-
-import os
+import os,sys
 
 class ParseError(Exception):
     pass
@@ -15,7 +14,8 @@ def file_exists(filename, verbose=False):
     try:
         os.stat(filename)
         return True
-    except OSError as e:
+    except (OSError,):
+        e = sys.exc_info()[1]
         if verbose:
             print e
         return False
@@ -24,8 +24,9 @@ def file_exists(filename, verbose=False):
 def parse_frequency_file(filename):
     try:
         return array([float(x.split('#')[0].strip()) for x in open(filename).readlines() if x.split('#')[0].strip() != ''])
-    except ValueError as e:
-        raise ParseError('while parsing '+filename+': '+e.message)
+    except (ValueError,):
+        e = sys.exc_info()[1]
+        raise ParseError('while parsing '+filename+': '+str(e))
 
 
 def as_wavelength_squared(frequencies):
