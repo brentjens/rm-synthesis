@@ -11,6 +11,11 @@ class ShapeError(Exception):
 
 
 def file_exists(filename, verbose=False):
+    """
+    Returns True of filename exists, False if it does not. If verbose
+    == True, it also prints an error message if the file does not
+    exist.
+    """
     try:
         os.stat(filename)
         return True
@@ -22,32 +27,67 @@ def file_exists(filename, verbose=False):
         
 
 def parse_frequency_file(filename):
+    """
+    Read a text file containing one floating point number per line,
+    and return an array of those values. Empty lines are
+    ignored. Comments can be included in the file behind a # mark.
+    The frequencies should be listed in Hz.
+
+    Raises a printable ParseError in case of problems with the
+    contents of the file.
+    """
     try:
         return array([float(x.split('#')[0].strip()) for x in open(filename).readlines() if x.split('#')[0].strip() != ''])
-    except (ValueError,):
-        e = sys.exc_info()[1]
+    except (ValueError,):      # Use this construction to be backwards
+        e = sys.exc_info()[1]  # compatible with Python 2.5.  Proper
+                               # Python 2.6/2.7/3.0 is
+                               # except ValueError as e:
+                               # etc...
         raise ParseError('while parsing '+filename+': '+str(e))
 
 
 def as_wavelength_squared(frequencies):
+    """
+    Convert frequencies (in Hz) to wavelength squared (in
+    m^2). Accepts a scalar value as well as arrays. The return value
+    has the same shape as \"frequencies\".
+    """
     return (299792458.0/frequencies)**2
 
 
-def get_fits_header_data(fitsname):
-    hdulist=pyfits.open(fitsname)
-    header=hdulist[0].header
-    data=hdulist[0].data
-    hdulist.close()
-    return header,data
 
 def get_fits_header(fitsname):
+    """
+    Return the header of the first Header Data Unit (HDU) of the FITS
+    file with name fitsname. May raise an OSError if the file cannot
+    be opened.
+    """
     hdulist=pyfits.open(fitsname)
     header=hdulist[0].header
     hdulist.close()
     return header
 
 
+def get_fits_header_data(fitsname):
+    """
+    Return a (header, data) tuple of the first Header Data Unit (HDU)
+    of the FITS file with name fitsname. May raise an OSError if the
+    file cannot be opened.
+    """    
+    hdulist=pyfits.open(fitsname)
+    header=hdulist[0].header
+    data=hdulist[0].data
+    hdulist.close()
+    return header,data
+
+
+
 def proper_fits_shapes(qname, uname, frequencyname):
+    """
+    Verify that the Q and U FITS cubes and the file with frequency
+    data have compatible shapes. Returns True if all is well, False
+    otherwise. Error messages are printed to sys.stdout.
+    """
     ok=True
     frequencies=parse_frequency_file(frequencyname)
     qh = get_fits_header(qname)
