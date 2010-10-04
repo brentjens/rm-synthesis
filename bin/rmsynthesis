@@ -147,11 +147,11 @@ def main(argv):
                                'force',
                                'check'])
     if len(arguments) != 3:
-        raise GetoptError('please provide a Q FITS cube, a U fits cube, and a text file with frequencies')
+        raise GetoptError('error: please provide a Q FITS cube, a U fits cube, and a text file with frequencies')
 
     files_exist=[file_exists(arg, verbose=True) for arg in arguments]
     if not all(files_exist):
-        print 'please provide a Q FITS cube, a U fits cube, and a text file with frequencies'
+        print 'error: please provide Q and U FITS cubes and a text file with frequencies'
         return -1
     
     qname,uname,frequencyname = arguments
@@ -198,7 +198,7 @@ def main(argv):
             lowframes = ceil(abs(0-low)/dphi)
             dphi= abs((0-low)*(1.0-1e-15)/(lowframes+1))
         else:
-            ValueError('Low phi limit ('+str(low)+') must be negative and high phi limit ('+str(high)+') positive')
+            ValueError('error: low phi limit ('+str(low)+') must be negative and high phi limit ('+str(high)+') positive')
             pass
         pass
     
@@ -229,9 +229,9 @@ def main(argv):
 
     if file_exists(log_name):
         if force_overwrite:
-            print 'file '+log_name+' already exists; it will be overwritten'
+            print 'warning: file '+log_name+' already exists; it will be overwritten'
         else:
-            print 'file '+log_name+' already exists; use --force to overwrite'
+            print 'error: file '+log_name+' already exists; use --force to overwrite'
             return -1
 
     if not proper_fits_shapes(qname, uname, frequencyname):
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     try:
         exit(main(sys.argv))
     except (OSError,):
-        print sys.exc_info()[1]
+        print 'error: '+sys.exc_info()[1]
         exit(-1)
     except (GetoptError, ParseError, ShapeError):
         print sys.exc_info()[1]

@@ -12,9 +12,9 @@ class ShapeError(Exception):
 
 def file_exists(filename, verbose=False):
     """
-    Returns True of filename exists, False if it does not. If verbose
-    == True, it also prints an error message if the file does not
-    exist.
+    Returns True oif *filename* exists, False if it does not. If
+    *verbose* is True, it also prints an error message if the file
+    does not exist.
     """
     try:
         os.stat(filename)
@@ -22,7 +22,7 @@ def file_exists(filename, verbose=False):
     except (OSError,):
         e = sys.exc_info()[1]
         if verbose:
-            print e
+            print 'error: '+str(e)
         return False
         
 
@@ -48,9 +48,9 @@ def parse_frequency_file(filename):
 
 def as_wavelength_squared(frequencies):
     """
-    Convert frequencies (in Hz) to wavelength squared (in
+    Convert *frequencies* (in Hz) to wavelength squared (in
     m^2). Accepts a scalar value as well as arrays. The return value
-    has the same shape as \"frequencies\".
+    has the same shape as *frequencies*.
     """
     return (299792458.0/frequencies)**2
 
@@ -59,7 +59,7 @@ def as_wavelength_squared(frequencies):
 def get_fits_header(fitsname):
     """
     Return the header of the first Header Data Unit (HDU) of the FITS
-    file with name fitsname. May raise an OSError if the file cannot
+    file with name *fitsname*. May raise an OSError if the file cannot
     be opened.
     """
     hdulist=pyfits.open(fitsname)
@@ -71,7 +71,7 @@ def get_fits_header(fitsname):
 def get_fits_header_data(fitsname):
     """
     Return a (header, data) tuple of the first Header Data Unit (HDU)
-    of the FITS file with name fitsname. May raise an OSError if the
+    of the FITS file with name *fitsname*. May raise an OSError if the
     file cannot be opened.
     """    
     hdulist=pyfits.open(fitsname)
@@ -85,31 +85,33 @@ def get_fits_header_data(fitsname):
 def proper_fits_shapes(qname, uname, frequencyname):
     """
     Verify that the Q and U FITS cubes and the file with frequency
-    data have compatible shapes. Returns True if all is well, False
-    otherwise. Error messages are printed to sys.stdout.
+    data have compatible shapes. *qname* and *uname* are the filenames
+    of the Q and U FITS files, respectively; *frequencyname* is the
+    filename of the frequency file.
+
+    Returns True if all is well, raises ShapeError otherwise.
     """
-    ok=True
     frequencies=parse_frequency_file(frequencyname)
     qh = get_fits_header(qname)
     uh = get_fits_header(uname)
+    errors=[]
     for name,h in [(qname, qh), (uname, uh)]:
         if h['NAXIS'] != 3:
-            print 'number of axes in '+name+' is '+str(h['NAXIS'])+', not 3'
-            ok=False
+            errors.append('error: number of axes in '+name+' is '+str(h['NAXIS'])+', not 3')
             pass
         pass
 
     for axis in ['NAXIS1', 'NAXIS2', 'NAXIS3']:
         if qh[axis] != uh[axis]:
-            print axis+' in '+qname+' ('+str(qh[axis])+') not equal to '+axis+' in '+uname+' ('+str(uh[axis])+')'
-            ok=False
+            errors,append('error: '+axis+' in '+qname+' ('+str(qh[axis])+') not equal to '+axis+' in '+uname+' ('+str(uh[axis])+')')
             pass
         pass
 
     if qh['NAXIS3'] != len(frequencies):
-            print 'number of frames in image cubes '+qname+' and '+uname+' ('+str(qh['NAXIS3'])+') not equal to number of frequencies in frequency file '+frequencyname+' ('+str(len(frequencies))+')'
-            ok=False
-    return ok
+        errors.append('error: number of frames in image cubes '+qname+' and '+uname+' ('+str(qh['NAXIS3'])+') not equal to number of frequencies in frequency file '+frequencyname+' ('+str(len(frequencies))+')')
+    if len(errors) > 0:
+        raise ShapeError('\n'.join(errors))
+    return True
         
 
 def rmsynthesis_phases(wavelength_squared, phi):
