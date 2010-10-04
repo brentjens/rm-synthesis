@@ -113,10 +113,21 @@ def proper_fits_shapes(qname, uname, frequencyname):
         
 
 def rmsynthesis_phases(wavelength_squared, phi):
+    """
+    Compute the phase factor exp(-2j*phi*wavelength_squared).
+    """
     return exp(-2j*phi*wavelength_squared)
     
 
 def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
+    """
+    Perform an RM synthesis on Q and U image cubes with given
+    frequencies. The rmcube that is returned is complex valued and has
+    a frame for every value in phi_array. It is assumed that the
+    dimensions of qcube, ucube, and frequencies have been verified
+    before with the help of the proper_fits_shapes() function. The
+    polarization vectors are derotated to the average lambda^2.
+    """
     wl2 = as_wavelength_squared(frequencies)
     rmcube=zeros((len(phi_array), qcube.shape[1], qcube.shape[2]), dtype=complex64)
     wl2_0 = wl2.mean()
@@ -133,6 +144,10 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
 
 
 def compute_rmsf(frequencies, phi_array):
+    """
+    Compute the Rotation Measure Spread Function, derotating to the
+    average lambda^2.
+    """
     wl2   = as_wavelength_squared(frequencies)
     wl2_0 = wl2.mean()
     return array([rmsynthesis_phases((wl2 - wl2_0), phi).mean() for phi in phi_array])
