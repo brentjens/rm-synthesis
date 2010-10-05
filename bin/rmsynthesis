@@ -269,7 +269,7 @@ def main(argv):
 if __name__ == "__main__":
     try:
         exit(main(sys.argv))
-    except (OSError,):
+    except (OSError, IOError):
         print 'error: '+sys.exc_info()[1]
         exit(-1)
     except (GetoptError, ParseError, ShapeError):
