@@ -155,6 +155,24 @@ def compute_rmsf(frequencies, phi_array):
     return array([rmsynthesis_phases((wl2 - wl2_0), phi).mean() for phi in phi_array])
 
 
+def add_phi_to_fits_header(fits_header, phi_array):
+    """
+    Returns a deep copy of *fits_header*. The returned copy has
+    Faraday depth as the third axis, with reference values and
+    increments as derived from *phi_array*. It is assumed that
+    *phi_array* contains values on a regular comb.
+    """
+    if len(phi_array) < 2:
+        raise ShapeError('RM cube should have two or more frames to be a cube')
+    fh = fits_header.copy()
+    fh.update('NAXIS3', len(phi_array))
+    fh.update('CRPIX3', 1.0)
+    fh.update('CRVAL3', phi_array[0])
+    fh.update('CDELT3', phi_array[1]-phi_array[0])
+    fh.update('CTYPE3', 'Faraday depth')
+    fh.update('CUNIT3', 'rad m^{-2}')
+    return fh
+
 
 def write_fits_cube(data_array, fits_header, fits_name, force_overwrite=False):
     hdulist    = pyfits.HDUList()
@@ -168,15 +186,21 @@ def write_fits_cube(data_array, fits_header, fits_name, force_overwrite=False):
 
 
 def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
-    write_fits_cube(abs(rmcube), fits_header,
+    fhp = fits_header.copy()
+    fhp.update('POL', 'P')
+    write_fits_cube(abs(rmcube), fhp,
                     os.path.join(output_dir, 'p-rmcube-dirty.fits'),
                     force_overwrite=force_overwrite)
     
-    write_fits_cube(rmcube.real, fits_header,
+    fhq = fits_header.copy()
+    fhq.update('POL', 'Q')
+    write_fits_cube(rmcube.real, fhq,
                     os.path.join(output_dir, 'q-rmcube-dirty.fits'),
                     force_overwrite=force_overwrite)
     
-    write_fits_cube(rmcube.imag, fits_header,
+    fhu = fits_header.copy()
+    fhu.update('POL', 'U')
+    write_fits_cube(rmcube.imag, fhu,
                     os.path.join(output_dir, 'u-rmcube-dirty.fits'),
                     force_overwrite=force_overwrite)
     pass

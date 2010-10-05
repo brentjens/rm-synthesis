@@ -256,7 +256,8 @@ def main(argv):
         qheader,qcube = get_fits_header_data(qname)
         uheader,ucube = get_fits_header_data(uname)
         rmcube=rmsynthesis_dirty(qcube, ucube, frequencies, phi)
-        write_rmcube(rmcube, qheader, output, force_overwrite)
+        write_rmcube(rmcube, add_phi_to_fits_header(qheader, phi),
+                     output, force_overwrite)
         
         rmsf=compute_rmsf(frequencies, phi)
         write_rmsf(phi, rmsf, output)
