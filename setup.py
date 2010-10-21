@@ -8,6 +8,7 @@ setup(name='rmsynthesis',
       author='Michiel Brentjens',
       author_email='brentjens@astron.nl',
       url='',
+      requires=['numpy', 'pyfits'],
       packages=['rmsynthesis'],
       scripts=['bin/rmsynthesis'],
      )

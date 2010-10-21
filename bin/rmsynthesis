@@ -138,7 +138,7 @@ otherwise specified with the -o option.
 def main(argv):
     if len(argv) == 1:
         return print_help()
-    options, arguments=getopt(sys.argv[1:],
+    options, arguments=getopt(argv[1:],
                               'o:l:h:d:fc',
                               ['output=',
                                'low=',
