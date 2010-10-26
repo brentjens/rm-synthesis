@@ -2,9 +2,39 @@
 
 from getopt import gnu_getopt as getopt
 from getopt import GetoptError
-import os,sys
+import os,sys,time
 
 from rmsynthesis import *
+
+def warn(s):
+    print
+    print '|------------------------------------------------------------------------------|'
+    print '| WARNING: '+s
+    print '|------------------------------------------------------------------------------|'
+    print
+    wrong_answer = True
+    answer=''
+    while wrong_answer:
+        sys.stdout.write('Do you wish to continue (yes, I do/no)>>> ')
+        answer = sys.stdin.readline().strip()
+        wrong_answer = answer not in ['yes, I do', 'no']
+        if len(answer)> 15:
+            sys.stdout.write('>>> stop babbling')
+            if answer[0:9] == 'yes, I do':
+                sys.stdout.write('! I will continue, though. <<<\n')
+                wrong_answer = False
+                answer = answer[0:9]
+            else:
+                sys.stdout.write(', and answer the question! <<<\n')
+                pass
+            time.sleep(2)
+            pass
+        pass
+    if answer == 'yes, I do':
+        return True
+    else:
+        exit(-1)
+    pass
 
 
 def print_summary(argv, **kwargs):
@@ -37,7 +67,6 @@ def print_summary(argv, **kwargs):
     prkv('Log file', kwargs['log_name'])
     print ''
     pass
-
 
 def print_help():
     print """Usage
@@ -155,6 +184,12 @@ def main(argv):
         return -1
     
     qname,uname,frequencyname = arguments
+    if qname == uname:
+        warn('Q name ('+qname+') and U name ('+uname+' are the same')
+        pass
+    if frequencyname[-4:].lower() == 'fits':
+        warn('Frequency file ('+frequencyname+') might be a fits file')
+        pass
     
     frequencies=parse_frequency_file(frequencyname)
     wl2 = as_wavelength_squared(frequencies)
