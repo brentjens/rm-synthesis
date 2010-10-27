@@ -102,6 +102,14 @@ rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
   -c/--check                 Perform all possible checks, but do not
                              write any files or compute an RM cube.
 
+  -q/--qfactor <qf>          Factor to multiply values in Q cube with,
+                             Default value is 1.0
+
+  -u/--ufactor <uf>          Factor to multiply values in U cube with,
+                             Default value is 1.0. For WSRT data, this
+                             factor must be 1.2 if it has not already
+                             been applied.
+
 
 Input
 -----
@@ -168,11 +176,13 @@ def main(argv):
     if len(argv) == 1:
         return print_help()
     options, arguments=getopt(argv[1:],
-                              'o:l:h:d:fc',
+                              'o:l:h:d:q:u:fc',
                               ['output=',
                                'low=',
                                'high=',
                                'dphi=',
+                               'qfactor=',
+                               'ufactor=',
                                'force',
                                'check'])
     if len(arguments) != 3:
@@ -208,6 +218,8 @@ def main(argv):
     force_overwrite=False
     check  = False
     dphi_user_override=False
+    qfactor= 1.0
+    ufactor= 1.0
     
     for (option, value) in options:
         print option
@@ -220,6 +232,10 @@ def main(argv):
         elif option in ['-d', '--dphi']:
             dphi=float(value)
             dphi_user_override=True
+        elif option in ['-q', '--qfactor']:
+            qfactor=float(value)
+        elif option in ['-u', '--ufactor']:
+            ufactor=float(value)
         elif option in ['-f', '--force']:
             force_overwrite = True
         elif option in ['-c', '--check']:
@@ -235,6 +251,13 @@ def main(argv):
         else:
             ValueError('error: low phi limit ('+str(low)+') must be negative and high phi limit ('+str(high)+') positive')
             pass
+        pass
+
+    if qfactor == 0:
+        warn('Q factor is 0.0')
+        pass
+    if ufactor == 0:
+        warn('U factor is 0.0')
         pass
     
     rmcube_name = os.path.join(output, '{p-,q-,u-}rmcube-dirty.fits')
@@ -290,7 +313,11 @@ def main(argv):
     if not check:
         qheader,qcube = get_fits_header_data(qname)
         uheader,ucube = get_fits_header_data(uname)
-        rmcube=rmsynthesis_dirty(qcube, ucube, frequencies, phi)
+        qcube *= qfactor
+        ucube *= ufactor
+        rmcube=rmsynthesis_dirty(qcube,
+                                 ucube,
+                                 frequencies, phi)
         write_rmcube(rmcube, add_phi_to_fits_header(qheader, phi),
                      output, force_overwrite)
         
