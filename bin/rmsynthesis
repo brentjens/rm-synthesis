@@ -222,7 +222,6 @@ def main(argv):
     ufactor= 1.0
     
     for (option, value) in options:
-        print option
         if   option in ['-o', '--output']:
             output = value
         elif option in ['-l', '--low']:
