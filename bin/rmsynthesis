@@ -339,6 +339,8 @@ if __name__ == "__main__":
         exit(-1)
     except (MemoryError, ):
         print sys.exc_info()[1]
-        print 'The input or output cubes are too large to handle at the moment.'
+        print 'The input or output cubes are too large to handle at the moment. They do '
+        print 'not fit in memory together with the intermediate results. Please make the'
+        print 'cubes smaller or kindly ask the author for an upgrade.'
         print 'use "'+sys.argv[0]+'" for help.'
         exit(-1)
