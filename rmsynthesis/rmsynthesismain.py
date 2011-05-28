@@ -186,6 +186,19 @@ def write_fits_cube(data_array, fits_header, fits_name, force_overwrite=False):
 
 
 def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
+    """
+    Writes a complex valued, 3D  *rmcube* to *output_dir* as three
+    separate FITS cubes:
+    
+    - *output_dir*/p-rmcube-dirty.fits : Absolute value.
+    - *output_dir*/q-rmcube-dirty.fits : Real part.
+    - *output_dir*/u-rmcube-dirty.fits : Imaginary part.
+
+    This function raises an IOError if *output_dir* does not exist, or
+    is not writable, or if the output file(s) already exist and
+    *force_overwrite* is False. If *force_overwrite* is True, the
+    output files will be overwritten.
+    """
     fhp = fits_header.copy()
     fhp.update('POL', 'P')
     write_fits_cube(abs(rmcube), fhp,
