@@ -11,7 +11,9 @@ Installation
 ------------
 
 This script assumes that the numpy and pyfits libraries are installed.
-Install using: python setup.py install.
+Install using: 
+
+user@machine: /.../rm-synthesis-x.y$ python setup.py install.
 
 
 Usage
@@ -45,6 +47,14 @@ rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
 
   -c/--check                 Perform all possible checks, but do not
                              write any files or compute an RM cube.
+
+  -q/--qfactor <qf>          Factor to multiply values in Q cube with,
+                             Default value is 1.0
+
+  -u/--ufactor <uf>          Factor to multiply values in U cube with,
+                             Default value is 1.0. For WSRT data, this
+                             factor must be 1.2 if it has not already
+                             been applied.
 
 
 Input
