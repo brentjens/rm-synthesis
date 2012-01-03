@@ -25,7 +25,7 @@ else
     logfile=/dev/null
 fi
 
-packages=`find . -name '__init__.py' -maxdepth 2|sed -e 's/^\.\///g' -e 's/\/__init__\.py//g'|grep -v test`
+packages=`find . -maxdepth 2 -name '__init__.py'|sed -e 's/^\.\///g' -e 's/\/__init__\.py//g'|grep -v test`
 
 
 for package in $packages; do
