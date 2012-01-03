@@ -1,22 +1,28 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 from getopt import gnu_getopt as getopt
 from getopt import GetoptError
-import os,sys,time
+import os, sys, time
 
-from rmsynthesis import *
+from rmsynthesis import ShapeError, ParseError, rmsynthesis_dirty, write_rmcube
+from rmsynthesis import compute_rmsf, write_rmsf, add_phi_to_fits_header
+from rmsynthesis import file_exists, proper_fits_shapes, parse_frequency_file
+from rmsynthesis import as_wavelength_squared, get_fits_header_data
 
-def warn(s):
-    print
-    print '|------------------------------------------------------------------------------|'
-    print '| WARNING: '+s
-    print '|------------------------------------------------------------------------------|'
-    print
+from numpy import arange, array, ceil, sqrt
+
+
+def warn(msg):
+    print('')
+    print('|------------------------------------------------------------------------------|')
+    print('| WARNING: '+msg)
+    print('|------------------------------------------------------------------------------|')
+    print('')
     wrong_answer = True
-    answer=''
+    answer       = ''
     while wrong_answer:
         sys.stdout.write('Do you wish to continue (yes, I do/no)>>> ')
-        answer = sys.stdin.readline().strip()
+        answer       = sys.stdin.readline().strip()
         wrong_answer = answer not in ['yes, I do', 'no']
         if len(answer)> 15:
             sys.stdout.write('>>> stop babbling')
@@ -26,30 +32,25 @@ def warn(s):
                 answer = answer[0:9]
             else:
                 sys.stdout.write(', and answer the question! <<<\n')
-                pass
             time.sleep(2)
-            pass
-        pass
     if answer == 'yes, I do':
         return True
     else:
         exit(-1)
-    pass
 
 
 def print_summary(argv, **kwargs):
-    W=15
+    key_width = 15
     def prkv(key, value):
-        print key.ljust(W)+': '+str(value)
-        pass
+        print(key.ljust(key_width)+': '+str(value))
     
-    print ''
-    print 'RM synthesis summary'
-    print '--------------------'
-    print ''
-    print 'Command'.ljust(W)+': '+' '.join(argv)
-    print u'Working dir'.ljust(W)+u': '+os.getcwdu()
-    print ''
+    print('')
+    print('RM synthesis summary')
+    print('--------------------')
+    print('')
+    print('Command'.ljust(key_width)+': '+' '.join(argv))
+    print(u'Working dir'.ljust(key_width)+u': '+os.getcwdu())
+    print('')
 
     prkv('Q cube', kwargs['qname'])
     prkv('U cube', kwargs['uname'])
@@ -65,11 +66,11 @@ def print_summary(argv, **kwargs):
     prkv('RM cube', kwargs['rmcube_name'])
     prkv('RMSF', kwargs['rmsf_name'])
     prkv('Log file', kwargs['log_name'])
-    print ''
-    pass
+    print('')
+
 
 def print_help():
-    print """Usage
+    print("""Usage
 -----
 
 rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
@@ -158,7 +159,7 @@ otherwise specified with the -o option.
 
 - rmsynthesis.log     Contains the command line options used to obtain
                       this output.
-"""
+""")
     return -1
 
 
@@ -174,120 +175,115 @@ otherwise specified with the -o option.
 def main(argv):
     if len(argv) == 1:
         return print_help()
-    options, arguments=getopt(argv[1:],
-                              'o:l:h:d:q:u:fc',
-                              ['output=',
-                               'low=',
-                               'high=',
-                               'dphi=',
-                               'qfactor=',
-                               'ufactor=',
-                               'force',
-                               'check'])
+    options, arguments = getopt(argv[1:],
+                                'o:l:h:d:q:u:fc',
+                                ['output=',
+                                'low=',
+                                'high=',
+                                'dphi=',
+                                'qfactor=',
+                                'ufactor=',
+                                'force',
+                                'check'])
     if len(arguments) != 3:
-        raise GetoptError('error: please provide a Q FITS cube, a U fits cube, and a text file with frequencies')
+        raise GetoptError('error: provide Q and U FITS cubes and a text file with frequencies')
 
-    files_exist=[file_exists(arg, verbose=True) for arg in arguments]
+    files_exist = [file_exists(arg, verbose = True) for arg in arguments]
     if not all(files_exist):
-        print 'error: please provide Q and U FITS cubes and a text file with frequencies'
+        print 'error: provide Q and U FITS cubes and a text file with frequencies'
         return -1
     
-    qname,uname,frequencyname = arguments
+    qname, uname, frequencyname = arguments
     if qname == uname:
         warn('Q name ('+qname+') and U name ('+uname+' are the same')
-        pass
     if frequencyname[-4:].lower() == 'fits':
         warn('Frequency file ('+frequencyname+') might be a fits file')
-        pass
     
-    frequencies=parse_frequency_file(frequencyname)
-    wl2 = as_wavelength_squared(frequencies)
-    sorted_wl2 = array(sorted(wl2))
-    smallest_dl2=min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
+    frequencies  = parse_frequency_file(frequencyname)
+    wl2          = as_wavelength_squared(frequencies)
+    sorted_wl2   = array(sorted(wl2))
+    smallest_dl2 = min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
     if abs(smallest_dl2) == 0.0:
         print 'error: two frames have equal frequency'
         return -1
     
     # Default values
     
-    output = '.'
-    low    = -sqrt(3)/smallest_dl2
-    high   = +sqrt(3)/smallest_dl2
-    dphi   = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
-    force_overwrite=False
-    check  = False
-    dphi_user_override=False
-    qfactor= 1.0
-    ufactor= 1.0
+    output  = '.'
+    low     = -sqrt(3)/smallest_dl2
+    high    = +sqrt(3)/smallest_dl2
+    dphi    = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
+    force_overwrite = False
+    check   = False
+    dphi_user_override = False
+    qfactor = 1.0
+    ufactor = 1.0
     
     for (option, value) in options:
         if   option in ['-o', '--output']:
             output = value
         elif option in ['-l', '--low']:
-            low=float(value)
+            low = float(value)
         elif option in ['-h', '--high']:
-            high=float(value)
+            high = float(value)
         elif option in ['-d', '--dphi']:
-            dphi=float(value)
-            dphi_user_override=True
+            dphi = float(value)
+            dphi_user_override = True
         elif option in ['-q', '--qfactor']:
-            qfactor=float(value)
+            qfactor = float(value)
         elif option in ['-u', '--ufactor']:
-            ufactor=float(value)
+            ufactor = float(value)
         elif option in ['-f', '--force']:
             force_overwrite = True
         elif option in ['-c', '--check']:
             check = True
-        pass # for...
+
 
     # Normalize dphi so that there is an integer number
     # of frames between low and high (inclusive)
     if not dphi_user_override:
         if low < 0 and high > 0:
             lowframes = ceil(abs(0-low)/dphi)
-            dphi= abs((0-low)*(1.0-1e-15)/(lowframes+1))
+            dphi = abs((0-low)*(1.0-1e-15)/(lowframes+1))
         else:
             ValueError('error: low phi limit ('+str(low)+') must be negative and high phi limit ('+str(high)+') positive')
-            pass
-        pass
 
     if qfactor == 0:
         warn('Q factor is 0.0')
-        pass
     if ufactor == 0:
         warn('U factor is 0.0')
-        pass
     
     rmcube_name = os.path.join(output, '{p-,q-,u-}rmcube-dirty.fits')
     rmsf_name   = os.path.join(output, 'rmsf.txt')
     log_name    = os.path.join(output, 'rmsynthesis.log')
 
-    phi=arange(low, high, dphi)
+    phi = arange(low, high, dphi)
 
 
     def summary():
         print_summary(argv,
                       qname=qname, uname=uname,
-                      frequencyname=frequencyname,
-                      output_dir=output,
-                      low_phi=low, high_phi=high, dphi=dphi,
-                      force_overwrite=force_overwrite,
-                      rmcube_name=rmcube_name,
-                      rmsf_name=rmsf_name,
-                      log_name=log_name,
-                      check=check)
-        pass
+                      frequencyname = frequencyname,
+                      output_dir    = output,
+                      low_phi       = low,
+                      high_phi      = high,
+                      dphi          = dphi,
+                      force_overwrite = force_overwrite,
+                      rmcube_name  = rmcube_name,
+                      rmsf_name    = rmsf_name,
+                      log_name     = log_name,
+                      check        = check)
 
     summary()
 
     if not file_exists(output):
-        print 'output dir '+output+' does not yet exist; it will be created'
+        print('output dir '+output+' does not yet exist; it will be created')
 
     if file_exists(log_name):
         if force_overwrite:
-            print 'warning: file '+log_name+' already exists; it will be overwritten'
+            print('warning: file '+log_name+' already exists; it will be overwritten')
         else:
-            print 'error: file '+log_name+' already exists; use --force to overwrite'
+            print('error: file '+log_name+' already exists; use --force to overwrite')
             return -1
 
     if not proper_fits_shapes(qname, uname, frequencyname):
@@ -298,30 +294,28 @@ def main(argv):
     if not check:
         if not file_exists(output):
             os.mkdir(output)
-        saveout=sys.stdout
-        sys.stdout=open(log_name, 'w')
+        saveout    = sys.stdout
+        sys.stdout = open(log_name, 'w')
         summary()
         sys.stdout.close()
-        sys.stdout=saveout
-        pass
+        sys.stdout = saveout
 
 
     # Finally, do the work...
     
     if not check:
-        qheader,qcube = get_fits_header_data(qname)
-        uheader,ucube = get_fits_header_data(uname)
+        qheader, qcube = get_fits_header_data(qname)
+        uheader, ucube = get_fits_header_data(uname)
         qcube *= qfactor
         ucube *= ufactor
-        rmcube=rmsynthesis_dirty(qcube,
-                                 ucube,
-                                 frequencies, phi)
+        rmcube = rmsynthesis_dirty(qcube,
+                                   ucube,
+                                   frequencies, phi)
         write_rmcube(rmcube, add_phi_to_fits_header(qheader, phi),
                      output, force_overwrite)
         
-        rmsf=compute_rmsf(frequencies, phi)
+        rmsf = compute_rmsf(frequencies, phi)
         write_rmsf(phi, rmsf, output)
-        pass
     return 0
 
 
@@ -331,16 +325,16 @@ if __name__ == "__main__":
     try:
         exit(main(sys.argv))
     except (OSError, IOError):
-        print 'error: '+sys.exc_info()[1]
+        print('error: '+sys.exc_info()[1])
         exit(-1)
     except (GetoptError, ParseError, ShapeError):
         print sys.exc_info()[1]
-        print 'use "'+sys.argv[0]+'" for help.'
+        print('use "'+sys.argv[0]+'" for help.')
         exit(-1)
     except (MemoryError, ):
         print sys.exc_info()[1]
-        print 'The input or output cubes are too large to handle at the moment. They do '
-        print 'not fit in memory together with the intermediate results. Please make the'
-        print 'cubes smaller or kindly ask the author for an upgrade.'
-        print 'use "'+sys.argv[0]+'" for help.'
+        print('The input or output cubes are too large to handle at the moment. They do ')
+        print('not fit in memory together with the intermediate results. Please make the')
+        print('cubes smaller or kindly ask the author for an upgrade.')
+        print('use "'+sys.argv[0]+'" for help.')
         exit(-1)
