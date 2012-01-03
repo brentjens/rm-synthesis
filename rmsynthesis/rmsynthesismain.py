@@ -1,6 +1,6 @@
-from  numpy import *
+from  numpy import array, exp, zeros, newaxis, real, imag, complex64
 import pyfits
-import os,sys
+import os, sys
 
 class ParseError(Exception):
     pass
@@ -20,9 +20,9 @@ def file_exists(filename, verbose=False):
         os.stat(filename)
         return True
     except (OSError,):
-        e = sys.exc_info()[1]
+        err = sys.exc_info()[1]
         if verbose:
-            print 'error: '+str(e)
+            print('error: '+str(err))
         return False
         
 
@@ -37,13 +37,15 @@ def parse_frequency_file(filename):
     contents of the file.
     """
     try:
-        return array([float(x.split('#')[0].strip()) for x in open(filename).readlines() if x.split('#')[0].strip() != ''])
-    except (ValueError,):      # Use this construction to be backwards
-        e = sys.exc_info()[1]  # compatible with Python 2.5.  Proper
-                               # Python 2.6/2.7/3.0 is
-                               # except ValueError as e:
-                               # etc...
-        raise ParseError('while parsing '+filename+': '+str(e))
+        return array([float(x.split('#')[0].strip())
+                      for x in open(filename).readlines()
+                      if x.split('#')[0].strip() != ''])
+    except (ValueError,):        # Use this construction to be backwards
+        err = sys.exc_info()[1]  # compatible with Python 2.5.  Proper
+                                 # Python 2.6/2.7/3.0 is
+                                 # except ValueError as err:
+                                 # etc...
+        raise ParseError('while parsing '+filename+': '+str(err))
 
 
 def as_wavelength_squared(frequencies):
@@ -62,8 +64,8 @@ def get_fits_header(fitsname):
     file with name *fitsname*. May raise an OSError if the file cannot
     be opened.
     """
-    hdulist=pyfits.open(fitsname)
-    header=hdulist[0].header
+    hdulist = pyfits.open(fitsname)
+    header  = hdulist[0].header
     hdulist.close()
     return header
 
@@ -74,11 +76,11 @@ def get_fits_header_data(fitsname):
     of the FITS file with name *fitsname*. May raise an OSError if the
     file cannot be opened.
     """    
-    hdulist=pyfits.open(fitsname)
-    header=hdulist[0].header
-    data=hdulist[0].data
+    hdulist = pyfits.open(fitsname)
+    header  = hdulist[0].header
+    data    = hdulist[0].data
     hdulist.close()
-    return header,data
+    return header, data
 
 
 
@@ -91,24 +93,20 @@ def proper_fits_shapes(qname, uname, frequencyname):
 
     Returns True if all is well, raises ShapeError otherwise.
     """
-    frequencies=parse_frequency_file(frequencyname)
-    qh = get_fits_header(qname)
-    uh = get_fits_header(uname)
-    errors=[]
-    for name,h in [(qname, qh), (uname, uh)]:
-        if h['NAXIS'] != 3:
-            errors.append('error: number of axes in '+name+' is '+str(h['NAXIS'])+', not 3')
-            pass
-        pass
+    frequencies = parse_frequency_file(frequencyname)
+    q_h         = get_fits_header(qname)
+    u_h         = get_fits_header(uname)
+    errors      = []
+    for name, hdr in [(qname, q_h), (uname, u_h)]:
+        if hdr['NAXIS'] != 3:
+            errors.append('error: number of axes in ' + name + ' is ' + str(hdr['NAXIS']) + ', not 3')
 
     for axis in ['NAXIS1', 'NAXIS2', 'NAXIS3']:
-        if qh[axis] != uh[axis]:
-            errors,append('error: '+axis+' in '+qname+' ('+str(qh[axis])+') not equal to '+axis+' in '+uname+' ('+str(uh[axis])+')')
-            pass
-        pass
+        if q_h[axis] != u_h[axis]:
+            errors.append('error: '+axis+' in '+qname+' ('+str(q_h[axis])+') not equal to '+axis+' in '+uname+' ('+str(u_h[axis])+')')
 
-    if qh['NAXIS3'] != len(frequencies):
-        errors.append('error: number of frames in image cubes '+qname+' and '+uname+' ('+str(qh['NAXIS3'])+') not equal to number of frequencies in frequency file '+frequencyname+' ('+str(len(frequencies))+')')
+    if q_h['NAXIS3'] != len(frequencies):
+        errors.append('error: number of frames in image cubes '+qname+' and '+uname+' ('+str(q_h['NAXIS3'])+') not equal to number of frequencies in frequency file '+frequencyname+' ('+str(len(frequencies))+')')
     if len(errors) > 0:
         raise ShapeError('\n'.join(errors))
     return True
@@ -130,18 +128,17 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     before with the help of the proper_fits_shapes() function. The
     polarization vectors are derotated to the average lambda^2.
     """
-    wl2 = as_wavelength_squared(frequencies)
-    rmcube=zeros((len(phi_array), qcube.shape[1], qcube.shape[2]), dtype=complex64)
-    wl2_0 = wl2.mean()
-    p_complex= qcube+1j*ucube
+    wl2       = as_wavelength_squared(frequencies)
+    rmcube    = zeros((len(phi_array), qcube.shape[1], qcube.shape[2]), dtype=complex64)
+    wl2_0     = wl2.mean()
+    p_complex = qcube+1j*ucube
     
-    n     = len(phi_array)
+    num   = len(phi_array)
     nfreq = len(frequencies)
-    for i,phi in enumerate(phi_array):
-        print 'processing frame '+str(i+1)+'/'+str(n)+' with phi = '+str(phi)
-        phases=rmsynthesis_phases(wl2-wl2_0, phi)[:,newaxis,newaxis]
-        rmcube[i,:,:] = (p_complex*phases).sum(axis=0)/nfreq
-        pass
+    for i, phi in enumerate(phi_array):
+        print('processing frame '+str(i+1)+'/'+str(num)+' with phi = '+str(phi))
+        phases = rmsynthesis_phases(wl2-wl2_0, phi)[:, newaxis, newaxis]
+        rmcube[i, :, :] = (p_complex*phases).sum(axis=0)/nfreq
     return rmcube
 
 
@@ -164,14 +161,14 @@ def add_phi_to_fits_header(fits_header, phi_array):
     """
     if len(phi_array) < 2:
         raise ShapeError('RM cube should have two or more frames to be a cube')
-    fh = fits_header.copy()
-    fh.update('NAXIS3', len(phi_array))
-    fh.update('CRPIX3', 1.0)
-    fh.update('CRVAL3', phi_array[0])
-    fh.update('CDELT3', phi_array[1]-phi_array[0])
-    fh.update('CTYPE3', 'Faraday depth')
-    fh.update('CUNIT3', 'rad m^{-2}')
-    return fh
+    fhdr = fits_header.copy()
+    fhdr.update('NAXIS3', len(phi_array))
+    fhdr.update('CRPIX3', 1.0)
+    fhdr.update('CRVAL3', phi_array[0])
+    fhdr.update('CDELT3', phi_array[1]-phi_array[0])
+    fhdr.update('CTYPE3', 'Faraday depth')
+    fhdr.update('CUNIT3', 'rad m^{-2}')
+    return fhdr
 
 
 def write_fits_cube(data_array, fits_header, fits_name, force_overwrite=False):
@@ -182,7 +179,6 @@ def write_fits_cube(data_array, fits_header, fits_name, force_overwrite=False):
     hdulist.append(hdu)
     hdulist.writeto(fits_name, clobber=force_overwrite)
     hdulist.close()
-    pass
 
 
 def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
@@ -216,13 +212,10 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     write_fits_cube(rmcube.imag, fhu,
                     os.path.join(output_dir, 'u-rmcube-dirty.fits'),
                     force_overwrite=force_overwrite)
-    pass
 
 
 def write_rmsf(phi, rmsf, output_dir):
-    rmsf_out=open(os.path.join(output_dir, 'rmsf.txt'), 'w')
-    for phi,y in zip(phi, rmsf):
-        rmsf_out.write('%10.4f  %10.4f %10.4f\n' % (phi, real(y), imag(y)))
-        pass
+    rmsf_out = open(os.path.join(output_dir, 'rmsf.txt'), 'w')
+    for phi, f_phi in zip(phi, rmsf):
+        rmsf_out.write('%10.4f  %10.4f %10.4f\n' % (phi, real(f_phi), imag(f_phi)))
     rmsf_out.close()
-    pass
