@@ -1,1 +1,1 @@
-from rmsynthesismain import *
+from rmsynthesis.rmsynthesismain import *

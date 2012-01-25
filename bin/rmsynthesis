@@ -8,6 +8,7 @@ from rmsynthesis import ShapeError, ParseError, rmsynthesis_dirty, write_rmcube
 from rmsynthesis import compute_rmsf, write_rmsf, add_phi_to_fits_header
 from rmsynthesis import file_exists, proper_fits_shapes, parse_frequency_file
 from rmsynthesis import as_wavelength_squared, get_fits_header_data
+from rmsynthesis import rmsynthesis_dirty_lowmem_main
 
 from numpy import arange, array, ceil, sqrt
 
@@ -49,7 +50,7 @@ def print_summary(argv, **kwargs):
     print('--------------------')
     print('')
     print('Command'.ljust(key_width)+': '+' '.join(argv))
-    print(u'Working dir'.ljust(key_width)+u': '+os.getcwdu())
+    print('Working dir'.ljust(key_width)+': '+os.getcwdu())
     print('')
 
     prkv('Q cube', kwargs['qname'])
@@ -58,11 +59,11 @@ def print_summary(argv, **kwargs):
     prkv('Output dir', kwargs['output_dir'])
     prkv('Force overwrite', kwargs['force_overwrite'])
     prkv('Check only', kwargs['check'])
-    print ''
+    print('')
     prkv('Low phi', kwargs['low_phi'])
     prkv('High phi', kwargs['high_phi'])
     prkv('Delta phi', kwargs['dphi'])
-    print ''
+    print('')
     prkv('RM cube', kwargs['rmcube_name'])
     prkv('RMSF', kwargs['rmsf_name'])
     prkv('Log file', kwargs['log_name'])
@@ -190,7 +191,7 @@ def main(argv):
 
     files_exist = [file_exists(arg, verbose = True) for arg in arguments]
     if not all(files_exist):
-        print 'error: provide Q and U FITS cubes and a text file with frequencies'
+        print('error: provide Q and U FITS cubes and a text file with frequencies')
         return -1
     
     qname, uname, frequencyname = arguments
@@ -204,7 +205,7 @@ def main(argv):
     sorted_wl2   = array(sorted(wl2))
     smallest_dl2 = min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
     if abs(smallest_dl2) == 0.0:
-        print 'error: two frames have equal frequency'
+        print('error: two frames have equal frequency')
         return -1
     
     # Default values
@@ -262,17 +263,18 @@ def main(argv):
 
     def summary():
         print_summary(argv,
-                      qname=qname, uname=uname,
+                      qname         = qname,
+                      uname         = uname,
                       frequencyname = frequencyname,
                       output_dir    = output,
                       low_phi       = low,
                       high_phi      = high,
                       dphi          = dphi,
                       force_overwrite = force_overwrite,
-                      rmcube_name  = rmcube_name,
-                      rmsf_name    = rmsf_name,
-                      log_name     = log_name,
-                      check        = check)
+                      rmcube_name   = rmcube_name,
+                      rmsf_name     = rmsf_name,
+                      log_name      = log_name,
+                      check         = check)
 
     summary()
 
@@ -304,16 +306,16 @@ def main(argv):
     # Finally, do the work...
     
     if not check:
-        qheader, qcube = get_fits_header_data(qname)
-        uheader, ucube = get_fits_header_data(uname)
-        qcube *= qfactor
-        ucube *= ufactor
-        rmcube = rmsynthesis_dirty(qcube,
-                                   ucube,
-                                   frequencies, phi)
-        write_rmcube(rmcube, add_phi_to_fits_header(qheader, phi),
-                     output, force_overwrite)
-        
+        # qheader, qcube = get_fits_header_data(qname)
+        # uheader, ucube = get_fits_header_data(uname)
+        # qcube *= qfactor
+        # ucube *= ufactor
+        # rmcube = rmsynthesis_dirty(qcube,
+        #                            ucube,
+        #                            frequencies, phi)
+        # write_rmcube(rmcube, add_phi_to_fits_header(qheader, phi),
+        #              output, force_overwrite)
+        rmsynthesis_dirty_lowmem_main(qname, uname, qfactor, ufactor, output, frequencies, phi, force_overwrite)
         rmsf = compute_rmsf(frequencies, phi)
         write_rmsf(phi, rmsf, output)
     return 0
@@ -328,11 +330,11 @@ if __name__ == "__main__":
         print('error: '+sys.exc_info()[1])
         exit(-1)
     except (GetoptError, ParseError, ShapeError):
-        print sys.exc_info()[1]
+        print(sys.exc_info()[1])
         print('use "'+sys.argv[0]+'" for help.')
         exit(-1)
     except (MemoryError, ):
-        print sys.exc_info()[1]
+        print(sys.exc_info()[1])
         print('The input or output cubes are too large to handle at the moment. They do ')
         print('not fit in memory together with the intermediate results. Please make the')
         print('cubes smaller or kindly ask the author for an upgrade.')
