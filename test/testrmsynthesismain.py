@@ -1,5 +1,6 @@
 import os, unittest, shutil
 from rmsynthesis.rmsynthesismain import *
+import rmsynthesis.fits as fits
 import pyfits
 
 from numpy import arange, complex128, exp, float32, newaxis, ones, pi
@@ -37,29 +38,6 @@ class RmSynthesisTest(unittest.TestCase):
         map(self.assertAlmostEquals, as_wavelength_squared(array([299792458.0, 299792458.0/2.0, 299792458.0/2.0])), [1.0, 4.0, 4.0])
         empty = as_wavelength_squared(array([]))
         self.assertEquals(len(empty), 0)
-
-
-    def test_get_fits_header(self):
-        qheader = get_fits_header(self.qname)
-        uheader = get_fits_header(self.uname)
-        self.assertEquals(qheader['POL'].strip(), 'Q')
-        self.assertEquals(qheader['NAXIS'], 3)
-        self.assertAlmostEquals(qheader['CDELT1'], 1.3e+6)
-        self.assertEquals(uheader['POL'].strip(), 'U')
-        self.assertRaises(IOError, lambda : get_fits_header(self.does_not_exist))
-        self.assertRaises(IOError, lambda : get_fits_header(self.freq_filename))
-
-
-    def test_get_fits_header_data(self):
-        hdr_q, data_q = get_fits_header_data(self.qname)
-        self.assertEquals(type(hdr_q), type(pyfits.Header()))
-        self.assertEquals(type(data_q), type(array([], dtype='>f4')))
-        self.assertEquals(data_q.dtype, '>f4')
-        self.assertEquals(len(data_q.shape), 3)
-        self.assertEquals(data_q.shape, (100, 100, 100))
-
-        self.assertRaises(IOError, lambda : get_fits_header_data(self.does_not_exist))
-        self.assertRaises(IOError, lambda : get_fits_header_data(self.freq_filename))
 
 
     def test_rmsynthesis_phases(self):
@@ -117,7 +95,7 @@ class RmSynthesisTest(unittest.TestCase):
         head_phi = add_phi_to_fits_header(head, [-10.0, -8.0, -6.0, -4.0, -2.0, 0.0, 2.0, 4.0])
         self.assertEquals(head_phi['NAXIS3'], 8)
         self.assertEquals(head_phi['CTYPE3'], 'Faraday depth')
-        self.assertEquals(head_phi['CUNIT3'], 'rad m^{-2}')
+        self.assertEquals(head_phi['CUNIT3'], 'rad_m2')
         self.assertAlmostEquals(head_phi['CRPIX3'], 1.0)
         self.assertAlmostEquals(head_phi['CRVAL3'], -10)
         self.assertAlmostEquals(head_phi['CDELT3'], +2.0)
@@ -135,7 +113,7 @@ class RmSynthesisTest(unittest.TestCase):
             data_array_out = ones((10, 5, 7), dtype = float32)*arange(10)[:, newaxis, newaxis]
             header_out     = pyfits.Header()
 
-            self.assertRaises(pyfits.VerifyError, lambda: write_fits_cube(data_array_out, header_out, fits_name))
+            self.assertRaises(pyfits.VerifyError, lambda: fits.write_cube(data_array_out, header_out, fits_name))
             self.assertFalse(file_exists(fits_name))
 
             header_out.update('SIMPLE', True)
@@ -144,17 +122,21 @@ class RmSynthesisTest(unittest.TestCase):
             header_out.update('NAXIS1', 7)
             header_out.update('NAXIS2', 5)
             header_out.update('NAXIS3', 10)
-            write_fits_cube(data_array_out, header_out, fits_name)
+            fits.write_cube(data_array_out, header_out, fits_name)
             self.assertTrue(file_exists(fits_name))
 
-            hdr, data = get_fits_header_data(fits_name)
+            hdr  = pyfits.getheader(fits_name)
+            data = pyfits.getdata(fits_name)
+            
             self.assertAlmostEquals(data.sum(), 5*7*arange(10).sum())
             self.assertAlmostEquals((data_array_out - data).sum(), 0.0)
 
             self.assertRaises(IOError,
-                              lambda: write_fits_cube(data_array_out, header_out, fits_name))
-            write_fits_cube(data_array_out*2, header_out, fits_name, force_overwrite = True)
-            hdr2, data2 = get_fits_header_data(fits_name)
+                              lambda: fits.write_cube(data_array_out, header_out, fits_name))
+            fits.write_cube(data_array_out*2, header_out, fits_name, force_overwrite = True)
+            hdr2  = pyfits.getheader(fits_name)
+            data2 = pyfits.getdata(fits_name)
+
             self.assertAlmostEquals(data2.sum(), 5*7*arange(10).sum()*2)
             self.assertAlmostEquals((data_array_out*2 - data2).sum(), 0.0)
         finally: # cleanup after potential exceptions
@@ -187,9 +169,9 @@ class RmSynthesisTest(unittest.TestCase):
             self.assertTrue('q-rmcube-dirty.fits' in file_names)
             self.assertTrue('u-rmcube-dirty.fits' in file_names)
 
-            hdr_p, data_p = get_fits_header_data(os.path.join(output_dir, 'p-rmcube-dirty.fits'))
-            hdr_q, data_q = get_fits_header_data(os.path.join(output_dir, 'q-rmcube-dirty.fits'))
-            hdr_u, data_u = get_fits_header_data(os.path.join(output_dir, 'u-rmcube-dirty.fits'))
+            hdr_p, data_p = fits.get_header_data(os.path.join(output_dir, 'p-rmcube-dirty.fits'))
+            hdr_q, data_q = fits.get_header_data(os.path.join(output_dir, 'q-rmcube-dirty.fits'))
+            hdr_u, data_u = fits.get_header_data(os.path.join(output_dir, 'u-rmcube-dirty.fits'))
 
             self.assertEquals(hdr_p['POL'], 'P')
             self.assertEquals(hdr_q['POL'], 'Q')

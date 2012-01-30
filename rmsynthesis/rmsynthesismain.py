@@ -1,11 +1,13 @@
 from numpy import array, exp, zeros, newaxis, real, imag, float32, complex64
 from numpy import product, fromfile
 import gc
+
 try:
     from itertools import izip
 except ImportError:
     izip = zip
-import pyfits
+    
+import rmsynthesis.fits as fits
 import os, sys
 
 
@@ -78,8 +80,8 @@ def proper_fits_shapes(qname, uname, frequencyname):
     Returns True if all is well, raises ShapeError otherwise.
     """
     frequencies = parse_frequency_file(frequencyname)
-    q_h         = get_fits_header(qname)
-    u_h         = get_fits_header(uname)
+    q_h         = fits.get_header(qname)
+    u_h         = fits.get_header(uname)
     errors      = []
     for name, hdr in [(qname, q_h), (uname, u_h)]:
         if hdr['NAXIS'] != 3:
@@ -142,7 +144,7 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor, frequencies, phi_
     polarization vectors are derotated to the average lambda^2.
     """
     wl2       = as_wavelength_squared(frequencies)
-    qheader   = get_fits_header(qname)
+    qheader   = fits.get_header(qname)
     rmcube    = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']), dtype = complex64)
     wl2_0     = wl2.mean()
     
@@ -196,15 +198,6 @@ def add_phi_to_fits_header(fits_header, phi_array):
     return fhdr
 
 
-def write_fits_cube(data_array, fits_header, fits_name, force_overwrite = False):
-    hdulist    = pyfits.HDUList()
-    hdu        = pyfits.PrimaryHDU()
-    hdu.header = fits_header
-    hdu.data   = data_array
-    hdulist.append(hdu)
-    hdulist.writeto(fits_name, clobber = force_overwrite)
-    hdulist.close()
-
 
 def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     """
@@ -222,19 +215,19 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     """
     fhp = fits_header.copy()
     fhp.update('POL', 'P')
-    write_fits_cube(abs(rmcube), fhp,
+    fits.write_cube(abs(rmcube), fhp,
                     os.path.join(output_dir, 'p-rmcube-dirty.fits'),
                     force_overwrite=force_overwrite)
     
     fhq = fits_header.copy()
     fhq.update('POL', 'Q')
-    write_fits_cube(rmcube.real, fhq,
+    fits.write_cube(rmcube.real, fhq,
                     os.path.join(output_dir, 'q-rmcube-dirty.fits'),
                     force_overwrite=force_overwrite)
     
     fhu = fits_header.copy()
     fhu.update('POL', 'U')
-    write_fits_cube(rmcube.imag, fhu,
+    fits.write_cube(rmcube.imag, fhu,
                     os.path.join(output_dir, 'u-rmcube-dirty.fits'),
                     force_overwrite=force_overwrite)
 
@@ -273,14 +266,14 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                                   force_overwrite):
     r'''
     '''
-    q_header      = get_fits_header(q_name)
+    q_header      = fits.get_header(q_name)
     output_header = add_phi_to_fits_header(q_header.copy(), phi_rad_m2)
     p_out_name, q_out_name, u_out_name = output_pqu_fits_names(output_dir)
     p_out_hdr , q_out_hdr , u_out_hdr  = output_pqu_headers(output_header)
 
     rmcube = rmsynthesis_dirty_lowmem(q_name, u_name, q_factor, u_factor, freq_hz, phi_rad_m2)
 
-    write_fits_cube(abs(rmcube) , p_out_hdr, p_out_name, force_overwrite = force_overwrite)
-    write_fits_cube(real(rmcube), q_out_hdr, q_out_name, force_overwrite = force_overwrite)
-    write_fits_cube(imag(rmcube), u_out_hdr, u_out_name, force_overwrite = force_overwrite)
+    fits.write_cube(abs(rmcube) , p_out_hdr, p_out_name, force_overwrite = force_overwrite)
+    fits.write_cube(real(rmcube), q_out_hdr, q_out_name, force_overwrite = force_overwrite)
+    fits.write_cube(imag(rmcube), u_out_hdr, u_out_name, force_overwrite = force_overwrite)
     
