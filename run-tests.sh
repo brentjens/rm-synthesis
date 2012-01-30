@@ -1,66 +1,40 @@
 #!/bin/bash
 
-logfile=testlog.txt
+# MODULEGRAPH=`which modulegraph`
+# DOT=`which dot`
+
+# if [[ -f $MODULEGRAPH ]]; then
+#     if [[ -f $DOT ]]; then
+#         for ext in svg pdf; do
+#            $MODULEGRAPH -x matplotlib -x IPython -x numpy -x pyrap -x scipy -x multiprocessing -x cvxopt -x os -x sys -x re -x pyfits -x copy -g holog/__init__.py|$DOT -s300 -T$ext > sphinx-doc/module_dependencies.$ext
+#            done;
+#     else
+#         echo "** ERROR: Please install graphviz and modulegraph to make dependency plots"
+#     fi;
+# else
+#     echo "** ERROR: Please install graphviz and modulegraph to make dependency plots"
+# fi;
+
+
+cd doc && make html && cd ..
+
 PYTHONPATH="`pwd`:$PYTHONPATH"
-#FIGLEAF=`which figleaf`
-COVERAGE=`which coverage`
-coverage_files=report-coverage.txt
+NOSETESTS=`which nosetests`
+
+if [[ ! -f "$NOSETESTS" ]] ; then
+    NOSETESTS=`which nosetests2`
+fi
 
 
-if test "$COVERAGE" = ""; then
-    echo "Cannot find coverage. Proceeding without test coverage analysis"
+if [[ ! -f "$NOSETESTS" ]] ; then
+    echo 'Cannot find nosetests or nosetests2';
 else
-    #rm .figleaf
-    rm .coverage
-fi
-
-rm -f $coverage_files
-
-
-if touch $logfile; then
-    echo "Will write results to $logfile"
-    rm  $logfile
-else
-    echo "Cannot write to log file $logfile. Proceeding without saving test results."
-    logfile=/dev/null
-fi
-
-packages=`find . -maxdepth 2 -name '__init__.py'|sed -e 's/^\.\///g' -e 's/\/__init__\.py//g'|grep -v test`
-
-
-for package in $packages; do
-    modules=`ls $package/*.py| grep -v "__init__"`
-    for module in $modules; do
-        echo |tee -a $logfile
-        echo "*** Testing module ${module} ***"|tee -a $logfile 
-        echo |tee -a $logfile
-        echo $module >> $coverage_files
-        testfile=test/test`basename ${module}`
-        echo $testfile
-        if test -e $testfile; then
-            
-            if test "$COVERAGE" = ""; then
-                python $testfile 2>&1 |tee -a $logfile |grep -e 'Ran\|OK\|FAILED\|Testing\|Error\|^    \|^  File \^\|line\|^Traceback\| != \| !< '
-            else
-                $COVERAGE run -a $testfile 2>&1 |tee -a $logfile |grep -e 'Ran\|OK\|FAILED\|Testing\|Error\|^    \|^  File \^\|line\|^Traceback\| != \| !< '
-            fi
-            echo Completed testing  ${module}
-        else
-            echo "Error: Module $module has no associated test" |tee -a $logfile
-        fi
-        echo ================================================================================ >> $logfile
-    done
-done
-
-if test "$COVERAGE" != ""; then
-    $COVERAGE html `cat $coverage_files`
-fi
-
-
-if test "$logfile" = "testlog.txt"; then
-    echo
-    echo
-    echo S U M M A R Y
-    echo
-    cat $logfile  |grep -e 'Ran\|OK\|FAILED\|Testing\|Error\|^    \|^  File \^\|line\|^Traceback\| != \| !< '
+   echo "Using $NOSETESTS"
+    $NOSETESTS --with-doctest --with-coverage \
+               --cover-package="rmsynthesis,test" \
+               --cover-tests \
+               --cover-html \
+               --cover-html-dir=coverage \
+               --cover-erase \
+               -x $@
 fi
