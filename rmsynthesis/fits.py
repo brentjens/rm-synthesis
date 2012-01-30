@@ -248,12 +248,14 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
     True
 
     If we try this again:
+
     >>> shdu  = streaming_output_hdu(fits_name, hdr, force_overwrite = False)
     Traceback (most recent call last):
     ...
     IOError: testdata/partial_output.fits already exists. Will not overwrite unless forced.
 
-    Let's try that again:    
+    Let's try that again:
+    
     >>> import time
     >>> current_time = time.time()
     >>> shdu  = streaming_output_hdu(fits_name, hdr, force_overwrite = True)
