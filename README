@@ -58,6 +58,8 @@ rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
                              factor must be 1.2 if it has not already
                              been applied.
 
+  -v/--version               Display version information.
+
 
 Input
 -----

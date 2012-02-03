@@ -9,6 +9,7 @@ from rmsynthesis import compute_rmsf, write_rmsf, add_phi_to_fits_header
 from rmsynthesis import file_exists, proper_fits_shapes, parse_frequency_file
 from rmsynthesis import as_wavelength_squared
 from rmsynthesis import rmsynthesis_dirty_lowmem_main
+from rmsynthesis import RMSYNTHESIS_VERSION
 
 from numpy import arange, array, ceil, sqrt
 
@@ -41,13 +42,14 @@ def warn(msg):
 
 
 def print_summary(argv, **kwargs):
+    global RMSYNTHESIS_VERSION
     key_width = 15
     def prkv(key, value):
         print(key.ljust(key_width)+': '+str(value))
     
     print('')
-    print('RM synthesis summary')
-    print('--------------------')
+    print('RM synthesis %s summary' % RMSYNTHESIS_VERSION)
+    print('------------------------')
     print('')
     print('Command'.ljust(key_width)+': '+' '.join(argv))
     print('Working dir'.ljust(key_width)+': '+os.getcwdu())
@@ -110,6 +112,8 @@ rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
                              Default value is 1.0. For WSRT data, this
                              factor must be 1.2 if it has not already
                              been applied.
+
+  -v/--version               Display version information.
 
 
 Input
@@ -174,10 +178,11 @@ otherwise specified with the -o option.
 
 
 def main(argv):
+    global RMSYNTHESIS_VERSION
     if len(argv) == 1:
         return print_help()
     options, arguments = getopt(argv[1:],
-                                'o:l:h:d:q:u:fc',
+                                'o:l:h:d:q:u:fcv',
                                 ['output=',
                                 'low=',
                                 'high=',
@@ -185,35 +190,15 @@ def main(argv):
                                 'qfactor=',
                                 'ufactor=',
                                 'force',
-                                'check'])
-    if len(arguments) != 3:
-        raise GetoptError('error: provide Q and U FITS cubes and a text file with frequencies')
-
-    files_exist = [file_exists(arg, verbose = True) for arg in arguments]
-    if not all(files_exist):
-        print('error: provide Q and U FITS cubes and a text file with frequencies')
-        return -1
-    
-    qname, uname, frequencyname = arguments
-    if qname == uname:
-        warn('Q name ('+qname+') and U name ('+uname+' are the same')
-    if frequencyname[-4:].lower() == 'fits':
-        warn('Frequency file ('+frequencyname+') might be a fits file')
-    
-    frequencies  = parse_frequency_file(frequencyname)
-    wl2          = as_wavelength_squared(frequencies)
-    sorted_wl2   = array(sorted(wl2))
-    smallest_dl2 = min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
-    if abs(smallest_dl2) == 0.0:
-        print('error: two frames have equal frequency')
-        return -1
+                                'check',
+                                'version'])
     
     # Default values
     
     output  = '.'
-    low     = -sqrt(3)/smallest_dl2
-    high    = +sqrt(3)/smallest_dl2
-    dphi    = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
+    low     = None
+    high    = None
+    dphi    = None
     force_overwrite = False
     check   = False
     dphi_user_override = False
@@ -238,8 +223,41 @@ def main(argv):
             force_overwrite = True
         elif option in ['-c', '--check']:
             check = True
+        elif option in ['-v', '--version']:
+            print('rmsynthesis %s (c) 2005-2012 M.A. Brentjens <brentjens@astron.nl>' % RMSYNTHESIS_VERSION)
+            exit(0)
 
+    if len(arguments) != 3:
+        raise GetoptError('error: provide Q and U FITS cubes and a text file with frequencies')
 
+    files_exist = [file_exists(arg, verbose = True) for arg in arguments]
+    if not all(files_exist):
+        print('error: provide Q and U FITS cubes and a text file with frequencies')
+        return -1
+    
+    qname, uname, frequencyname = arguments
+    if qname == uname:
+        warn('Q name ('+qname+') and U name ('+uname+' are the same')
+    if frequencyname[-4:].lower() == 'fits':
+        warn('Frequency file ('+frequencyname+') might be a fits file')
+    
+    frequencies  = parse_frequency_file(frequencyname)
+    wl2          = as_wavelength_squared(frequencies)
+    sorted_wl2   = array(sorted(wl2))
+    smallest_dl2 = min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
+    if abs(smallest_dl2) == 0.0:
+        print('error: two frames have equal frequency')
+        return -1
+
+    if low is None:
+        low = -sqrt(3)/smallest_dl2
+        
+    if high is None:
+        high = +sqrt(3)/smallest_dl2
+        
+    if dphi is None:
+        dphi = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
+        
     # Normalize dphi so that there is an integer number
     # of frames between low and high (inclusive)
     if not dphi_user_override:
