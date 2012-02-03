@@ -1,5 +1,5 @@
-RM-Synthesis
-============
+RM-Synthesis Overview
+=====================
 
 (c) Michiel Brentjens <brentjens@astron.nl>
 
@@ -15,7 +15,6 @@ Installation
 This script assumes that the numpy and pyfits libraries are installed.
 Install using: 
 
-.. code::
     user@machine: /.../rm-synthesis-x.y$ python setup.py install.
 
 

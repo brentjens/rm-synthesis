@@ -10,7 +10,7 @@ except ImportError:
 import rmsynthesis.fits as fits
 import os, sys
 
-
+RMSYNTHESIS_VERSION = '0.8'
 
 class ParseError(Exception):
     pass

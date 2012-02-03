@@ -12,7 +12,7 @@ Contents:
    :maxdepth: 2
 
    readme
-   fits
+   apidoc
 
 Indices and tables
 ==================
