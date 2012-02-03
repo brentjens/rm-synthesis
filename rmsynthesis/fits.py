@@ -2,7 +2,8 @@ r'''
 A collection of small utilities to interface with ``pyfits``.
 '''
 
-import pyfits, os
+from numpy import product, fromfile
+import pyfits, os, sys
 
 
 def get_header(fits_name):
@@ -163,7 +164,7 @@ def fits_image_frames(fits_name):
     shape  = (header['NAXIS2'], header['NAXIS1'])
     frame_size = product(shape)*abs(header['BITPIX']/8)
     
-    data_start, data_length = get_fits_data_start_and_size(fits_name)
+    data_start, data_length = get_data_offset_length(fits_name)
     file_stream = open(fits_name, mode='rb')
     file_stream.seek(data_start)
     try:

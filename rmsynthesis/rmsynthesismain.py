@@ -150,8 +150,8 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor, frequencies, phi_
     
     num      = len(phi_array)
     nfreq    = len(frequencies)
-    q_frames = fits_image_frames(qname)
-    u_frames = fits_image_frames(uname)
+    q_frames = fits.fits_image_frames(qname)
+    u_frames = fits.fits_image_frames(uname)
     frame_id = 0
     wl2_norm = wl2 - wl2_0 
     for q_frame, u_frame in izip(q_frames, u_frames):
@@ -193,8 +193,8 @@ def add_phi_to_fits_header(fits_header, phi_array):
     fhdr.update('CRPIX3', 1.0)
     fhdr.update('CRVAL3', phi_array[0])
     fhdr.update('CDELT3', phi_array[1]-phi_array[0])
-    fhdr.update('CTYPE3', 'Faraday depth')
-    fhdr.update('CUNIT3', 'rad_m2')
+    fhdr.update('CTYPE3', 'FARDEPTH')
+    fhdr.update('CUNIT3', 'RAD/M^2')
     return fhdr
 
 

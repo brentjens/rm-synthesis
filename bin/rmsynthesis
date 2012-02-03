@@ -7,7 +7,7 @@ import os, sys, time
 from rmsynthesis import ShapeError, ParseError, rmsynthesis_dirty, write_rmcube
 from rmsynthesis import compute_rmsf, write_rmsf, add_phi_to_fits_header
 from rmsynthesis import file_exists, proper_fits_shapes, parse_frequency_file
-from rmsynthesis import as_wavelength_squared, get_fits_header_data
+from rmsynthesis import as_wavelength_squared
 from rmsynthesis import rmsynthesis_dirty_lowmem_main
 
 from numpy import arange, array, ceil, sqrt

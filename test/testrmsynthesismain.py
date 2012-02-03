@@ -94,8 +94,8 @@ class RmSynthesisTest(unittest.TestCase):
 
         head_phi = add_phi_to_fits_header(head, [-10.0, -8.0, -6.0, -4.0, -2.0, 0.0, 2.0, 4.0])
         self.assertEquals(head_phi['NAXIS3'], 8)
-        self.assertEquals(head_phi['CTYPE3'], 'Faraday depth')
-        self.assertEquals(head_phi['CUNIT3'], 'rad_m2')
+        self.assertEquals(head_phi['CTYPE3'], 'FARDEPTH')
+        self.assertEquals(head_phi['CUNIT3'], 'RAD/M^2')
         self.assertAlmostEquals(head_phi['CRPIX3'], 1.0)
         self.assertAlmostEquals(head_phi['CRVAL3'], -10)
         self.assertAlmostEquals(head_phi['CDELT3'], +2.0)
