@@ -15,7 +15,7 @@ Installation
 This script assumes that the numpy and pyfits libraries are installed.
 Install using: 
 
-    user@machine: /.../rm-synthesis-x.y$ python setup.py install.
+    user@machine: /.../rmsynthesis-x.y$ python setup.py install.
 
 
 Usage
