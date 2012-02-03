@@ -1,0 +1,8 @@
+include README
+include MANIFEST
+include *.sh
+include MANIFEST.in
+recursive-include testdata *
+recursive-include doc *
+prune *~
+prune *.pyc
