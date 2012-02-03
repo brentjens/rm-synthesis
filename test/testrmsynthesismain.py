@@ -107,44 +107,6 @@ class RmSynthesisTest(unittest.TestCase):
         self.assertRaises(ShapeError, lambda: add_phi_to_fits_header(head, []))
 
 
-    def test_write_fits_cube(self):
-        fits_name = os.tempnam()+'.fits'
-        try:
-            data_array_out = ones((10, 5, 7), dtype = float32)*arange(10)[:, newaxis, newaxis]
-            header_out     = pyfits.Header()
-
-            self.assertRaises(pyfits.VerifyError, lambda: fits.write_cube(data_array_out, header_out, fits_name))
-            self.assertFalse(file_exists(fits_name))
-
-            header_out.update('SIMPLE', True)
-            header_out.update('BITPIX', -32)
-            header_out.update('NAXIS', 3)
-            header_out.update('NAXIS1', 7)
-            header_out.update('NAXIS2', 5)
-            header_out.update('NAXIS3', 10)
-            fits.write_cube(data_array_out, header_out, fits_name)
-            self.assertTrue(file_exists(fits_name))
-
-            hdr  = pyfits.getheader(fits_name)
-            data = pyfits.getdata(fits_name)
-            
-            self.assertAlmostEquals(data.sum(), 5*7*arange(10).sum())
-            self.assertAlmostEquals((data_array_out - data).sum(), 0.0)
-
-            self.assertRaises(IOError,
-                              lambda: fits.write_cube(data_array_out, header_out, fits_name))
-            fits.write_cube(data_array_out*2, header_out, fits_name, force_overwrite = True)
-            hdr2  = pyfits.getheader(fits_name)
-            data2 = pyfits.getdata(fits_name)
-
-            self.assertAlmostEquals(data2.sum(), 5*7*arange(10).sum()*2)
-            self.assertAlmostEquals((data_array_out*2 - data2).sum(), 0.0)
-        finally: # cleanup after potential exceptions
-            if file_exists(fits_name):
-                os.remove(fits_name)
-
-
-
     def test_write_rmcube(self):
         output_dir = os.tempnam()
         os.mkdir(output_dir)

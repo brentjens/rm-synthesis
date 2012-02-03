@@ -150,8 +150,8 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor, frequencies, phi_
     
     num      = len(phi_array)
     nfreq    = len(frequencies)
-    q_frames = fits.fits_image_frames(qname)
-    u_frames = fits.fits_image_frames(uname)
+    q_frames = fits.image_frames(qname)
+    u_frames = fits.image_frames(uname)
     frame_id = 0
     wl2_norm = wl2 - wl2_0 
     for q_frame, u_frame in izip(q_frames, u_frames):
@@ -215,20 +215,20 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     """
     fhp = fits_header.copy()
     fhp.update('POL', 'P')
-    fits.write_cube(abs(rmcube), fhp,
-                    os.path.join(output_dir, 'p-rmcube-dirty.fits'),
+    fits.write_cube(os.path.join(output_dir, 'p-rmcube-dirty.fits'),
+                    fhp, abs(rmcube),
                     force_overwrite=force_overwrite)
     
     fhq = fits_header.copy()
     fhq.update('POL', 'Q')
-    fits.write_cube(rmcube.real, fhq,
-                    os.path.join(output_dir, 'q-rmcube-dirty.fits'),
+    fits.write_cube(os.path.join(output_dir, 'q-rmcube-dirty.fits'),
+                    fhq, rmcube.real,
                     force_overwrite=force_overwrite)
     
     fhu = fits_header.copy()
     fhu.update('POL', 'U')
-    fits.write_cube(rmcube.imag, fhu,
-                    os.path.join(output_dir, 'u-rmcube-dirty.fits'),
+    fits.write_cube(os.path.join(output_dir, 'u-rmcube-dirty.fits'),
+                    fhu, rmcube.imag,
                     force_overwrite=force_overwrite)
 
 
@@ -273,7 +273,7 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
 
     rmcube = rmsynthesis_dirty_lowmem(q_name, u_name, q_factor, u_factor, freq_hz, phi_rad_m2)
 
-    fits.write_cube(abs(rmcube) , p_out_hdr, p_out_name, force_overwrite = force_overwrite)
-    fits.write_cube(real(rmcube), q_out_hdr, q_out_name, force_overwrite = force_overwrite)
-    fits.write_cube(imag(rmcube), u_out_hdr, u_out_name, force_overwrite = force_overwrite)
+    fits.write_cube(p_out_name, p_out_hdr,  abs(rmcube), force_overwrite = force_overwrite)
+    fits.write_cube(q_out_name, q_out_hdr, real(rmcube), force_overwrite = force_overwrite)
+    fits.write_cube(u_out_name, u_out_hdr, imag(rmcube), force_overwrite = force_overwrite)
     
