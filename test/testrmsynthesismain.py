@@ -1,5 +1,5 @@
 import os, unittest, shutil
-from rmsynthesis.rmsynthesismain import *
+from rmsynthesis.main import *
 import rmsynthesis.fits as fits
 import pyfits
 
@@ -18,13 +18,7 @@ class RmSynthesisTest(unittest.TestCase):
         self.phi  = arange(-100.0, 100.0, 4.0)
 
 
-    def test_file_exists(self):
-        self.assertTrue(file_exists(self.freq_filename))
-        self.assertFalse(file_exists(self.does_not_exist))
-        self.assertFalse(file_exists(self.does_not_exist, verbose=True))
 
-
-    def test_parse_frequency_file(self):
         for from_file, reference in zip(parse_frequency_file(self.freq_filename),
                                         [314.159265e6, 314.359265e6, 320e6, 330e6,
                                          340000000, 350e6, 3.6e8, 3.7e8,]):
@@ -162,7 +156,7 @@ class RmSynthesisTest(unittest.TestCase):
             rmsf  = compute_rmsf(self.freq, self.phi)
             fname = os.path.join(output_dir, 'rmsf.txt')
             write_rmsf(self.phi, rmsf, output_dir)
-            self.assertTrue(file_exists(fname))
+            self.assertTrue(os.path.exists(fname))
             lines    = open(fname).readlines()
             contents = array([map(float, l.split()) for l in lines])
             phi_in   = contents[:, 0]
