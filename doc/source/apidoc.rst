@@ -2,12 +2,18 @@ Python module API reference
 ===========================
 
 
+Module ``rmsynthesis``
+----------------------
+
+.. automodule:: rmsynthesis
+   :members:
 
 
-Module ``rmsynthesis.rmsynthesismain``
---------------------------------------
 
-.. automodule:: rmsynthesis.rmsynthesismain
+Module ``rmsynthesis.main``
+---------------------------
+
+.. automodule:: rmsynthesis.main
    :members:
 
 

@@ -1,14 +1,15 @@
 from numpy import array, exp, zeros, newaxis, real, imag, float32, complex64
 from numpy import product, fromfile
-import gc
+import gc, os, sys
 
 try:
     from itertools import izip
 except ImportError:
-    izip = zip
+    def izip(*args):
+        return zip(*args)
+    izip.__doc__ = zip.__doc__
     
 import rmsynthesis.fits as fits
-import os, sys
 
 RMSYNTHESIS_VERSION = '0.9'
 
@@ -20,24 +21,8 @@ class ShapeError(Exception):
 
 
 
-def file_exists(filename, verbose=False):
-    """
-    Returns True oif *filename* exists, False if it does not. If
-    *verbose* is True, it also prints an error message if the file
-    does not exist.
-    """
-    try:
-        os.stat(filename)
-        return True
-    except (OSError,):
-        err = sys.exc_info()[1]
-        if verbose:
-            print('error: '+str(err))
-        return False
-        
-
 def parse_frequency_file(filename):
-    """
+    r'''
     Read a text file containing one floating point number per line,
     and return an array of those values. Empty lines are
     ignored. Comments can be included in the file behind a # mark.
@@ -45,7 +30,7 @@ def parse_frequency_file(filename):
 
     Raises a printable ParseError in case of problems with the
     contents of the file.
-    """
+    '''
     try:
         return array([float(x.split('#')[0].strip())
                       for x in open(filename).readlines()

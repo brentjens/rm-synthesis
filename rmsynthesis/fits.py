@@ -278,7 +278,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
     >>> shdu  = streaming_output_hdu(fits_name, hdr, force_overwrite = False)
     Traceback (most recent call last):
     ...
-    IOError: testdata/partial_output.fits already exists. Will not overwrite unless forced.
+    IOError: testdata/partial_output.fits already exists and is not overwritten.
 
     Let's try that again:
     
@@ -305,7 +305,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
             print('Overwriting existing file %r.' % fits_name)
             os.remove(fits_name)
         else:
-            raise IOError('%s already exists. Will not overwrite unless forced.' %
+            raise IOError('%s already exists and is not overwritten.' %
                           fits_name)
     return pyfits.core.StreamingHDU(fits_name, fits_header)
     
