@@ -1,5 +1,4 @@
-from numpy import array, exp, zeros, newaxis, real, imag, float32, complex64
-from numpy import product, fromfile
+from numpy import array, exp, zeros, newaxis, real, imag, complex64
 import gc, os, sys
 
 try:
@@ -70,18 +69,23 @@ def proper_fits_shapes(qname, uname, frequencyname):
     errors      = []
     for name, hdr in [(qname, q_h), (uname, u_h)]:
         if hdr['NAXIS'] != 3:
-            errors.append('error: number of axes in ' + name + ' is ' + str(hdr['NAXIS']) + ', not 3')
+            errors.append('error: number of axes in %s  is  %d, not 3' %
+                          (name, hdr['NAXIS']))
 
     for axis in ['NAXIS1', 'NAXIS2', 'NAXIS3']:
         if q_h[axis] != u_h[axis]:
-            errors.append('error: '+axis+' in '+qname+' ('+str(q_h[axis])+') not equal to '+axis+' in '+uname+' ('+str(u_h[axis])+')')
+            errors.append('error: %s in %s (%d) not equal to %s in %s (%d)' % 
+                          (axis, qname, q_h[axis], axis, uname, u_h[axis]))
 
     if q_h['NAXIS3'] != len(frequencies):
-        errors.append('error: number of frames in image cubes '+qname+' and '+uname+' ('+str(q_h['NAXIS3'])+') not equal to number of frequencies in frequency file '+frequencyname+' ('+str(len(frequencies))+')')
+        msg = ('error: frames in %r and %r (%d) not the same as in %r (%d)' %
+               (qname, uname, q_h['NAXIS3'], frequencyname, len(frequencies)))
+        errors.append(msg)
     if len(errors) > 0:
         raise ShapeError('\n'.join(errors))
     return True
         
+
 
 def rmsynthesis_phases(wavelength_squared, phi):
     """
@@ -102,14 +106,15 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     polarization vectors are derotated to the average lambda^2.
     """
     wl2       = as_wavelength_squared(frequencies)
-    rmcube    = zeros((len(phi_array), qcube.shape[1], qcube.shape[2]), dtype=complex64)
+    rmcube    = zeros((len(phi_array), qcube.shape[1], qcube.shape[2]),
+                      dtype=complex64)
     wl2_0     = wl2.mean()
     p_complex = qcube+1j*ucube
     
     num   = len(phi_array)
     nfreq = len(frequencies)
     for i, phi in enumerate(phi_array):
-        print('processing frame '+str(i+1)+'/'+str(num)+' with phi = '+str(phi))
+        print('processing frame %4d/%d, phi = %7.1f' % (i+1, num, phi))
         phases = rmsynthesis_phases(wl2-wl2_0, phi)[:, newaxis, newaxis]
         rmcube[i, :, :] = (p_complex*phases).sum(axis=0)/nfreq
     return rmcube
@@ -119,7 +124,8 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
 def mul(matrix, scalar):
     return matrix*scalar
 
-def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor, frequencies, phi_array):
+def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor, 
+                             frequencies, phi_array):
     """
     Perform an RM synthesis on Q and U image cubes with given
     frequencies. The rmcube that is returned is complex valued and has
@@ -130,7 +136,8 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor, frequencies, phi_
     """
     wl2       = as_wavelength_squared(frequencies)
     qheader   = fits.get_header(qname)
-    rmcube    = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']), dtype = complex64)
+    rmcube    = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']),
+                      dtype = complex64)
     wl2_0     = wl2.mean()
     
     num      = len(phi_array)
@@ -161,7 +168,8 @@ def compute_rmsf(frequencies, phi_array):
     """
     wl2   = as_wavelength_squared(frequencies)
     wl2_0 = wl2.mean()
-    return array([rmsynthesis_phases((wl2 - wl2_0), phi).mean() for phi in phi_array])
+    return array([rmsynthesis_phases((wl2 - wl2_0), phi).mean()
+                  for phi in phi_array])
 
 
 def add_phi_to_fits_header(fits_header, phi_array):
@@ -220,14 +228,16 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
 def write_rmsf(phi, rmsf, output_dir):
     rmsf_out = open(os.path.join(output_dir, 'rmsf.txt'), 'w')
     for phi, f_phi in zip(phi, rmsf):
-        rmsf_out.write('%10.4f  %10.4f %10.4f\n' % (phi, real(f_phi), imag(f_phi)))
+        rmsf_out.write('%10.4f  %10.4f %10.4f\n' %
+                       (phi, real(f_phi), imag(f_phi)))
     rmsf_out.close()
 
 
 def output_pqu_fits_names(output_dir):
     r'''
     '''
-    return tuple([os.path.join(output_dir, pol+'-rmcube-dirty.fits') for pol in 'pqu'])
+    return tuple([os.path.join(output_dir, pol+'-rmcube-dirty.fits')
+                  for pol in 'pqu'])
 
 
 def output_pqu_headers(fits_header):
@@ -242,7 +252,7 @@ def output_pqu_headers(fits_header):
     u_hdr = fits_header.copy()
     u_hdr.update('POL', 'U')
     
-    return  p_hdr, q_hdr, u_hdr #tuple([fits_header.copy().update('POL', pol) for pol in ['P', 'Q', 'U']])
+    return  p_hdr, q_hdr, u_hdr
 
 
 
@@ -256,9 +266,13 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
     p_out_name, q_out_name, u_out_name = output_pqu_fits_names(output_dir)
     p_out_hdr , q_out_hdr , u_out_hdr  = output_pqu_headers(output_header)
 
-    rmcube = rmsynthesis_dirty_lowmem(q_name, u_name, q_factor, u_factor, freq_hz, phi_rad_m2)
+    rmcube = rmsynthesis_dirty_lowmem(q_name, u_name, q_factor, u_factor,
+                                      freq_hz, phi_rad_m2)
 
-    fits.write_cube(p_out_name, p_out_hdr,  abs(rmcube), force_overwrite = force_overwrite)
-    fits.write_cube(q_out_name, q_out_hdr, real(rmcube), force_overwrite = force_overwrite)
-    fits.write_cube(u_out_name, u_out_hdr, imag(rmcube), force_overwrite = force_overwrite)
+    fits.write_cube(p_out_name, p_out_hdr,  abs(rmcube),
+                    force_overwrite = force_overwrite)
+    fits.write_cube(q_out_name, q_out_hdr, real(rmcube),
+                    force_overwrite = force_overwrite)
+    fits.write_cube(u_out_name, u_out_hdr, imag(rmcube),
+                    force_overwrite = force_overwrite)
     
