@@ -7,7 +7,7 @@ import os, sys, time
 from rmsynthesis import ShapeError, ParseError, rmsynthesis_dirty, write_rmcube
 from rmsynthesis import compute_rmsf, write_rmsf, add_phi_to_fits_header
 from rmsynthesis import file_exists, proper_fits_shapes, parse_frequency_file
-from rmsynthesis import as_wavelength_squared
+from rmsynthesis import wavelength_squared_m2
 from rmsynthesis import rmsynthesis_dirty_lowmem_main
 from rmsynthesis import RMSYNTHESIS_VERSION
 
@@ -242,7 +242,7 @@ def main(argv):
         warn('Frequency file ('+frequencyname+') might be a fits file')
     
     frequencies  = parse_frequency_file(frequencyname)
-    wl2          = as_wavelength_squared(frequencies)
+    wl2          = wavelength_squared_m2(frequencies)
     sorted_wl2   = array(sorted(wl2))
     smallest_dl2 = min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
     if abs(smallest_dl2) == 0.0:

@@ -26,14 +26,6 @@ class RmSynthesisTest(unittest.TestCase):
 
         self.assertRaises(ParseError, lambda : parse_frequency_file(self.freq_filename_parse_error))
 
-
-    def test_as_wavelength_squared(self):
-        self.assertAlmostEquals(as_wavelength_squared(299792458.0), 1.0)
-        map(self.assertAlmostEquals, as_wavelength_squared(array([299792458.0, 299792458.0/2.0, 299792458.0/2.0])), [1.0, 4.0, 4.0])
-        empty = as_wavelength_squared(array([]))
-        self.assertEquals(len(empty), 0)
-
-
     def test_rmsynthesis_phases(self):
         self.assertAlmostEquals(rmsynthesis_phases(1.0, pi), 1.0)
         self.assertAlmostEquals(rmsynthesis_phases(pi, 0.5), -1.0)
@@ -50,7 +42,7 @@ class RmSynthesisTest(unittest.TestCase):
         f_phi = zeros((len(self.phi)), dtype = complex64)
         f_phi[15] = 3-4j
 
-        p_f = (f_phi[newaxis, :]*exp(2j*as_wavelength_squared(self.freq)[:, newaxis]*self.phi[newaxis, :])).sum(axis = 1)
+        p_f = (f_phi[newaxis, :]*exp(2j*wavelength_squared_m2(self.freq)[:, newaxis]*self.phi[newaxis, :])).sum(axis = 1)
 
         qcube = zeros((len(self.freq), 5, 7), dtype = complex64)
         ucube = zeros((len(self.freq), 5, 7), dtype = complex64)
@@ -63,14 +55,14 @@ class RmSynthesisTest(unittest.TestCase):
         self.assertTrue((rmcube_cut == 0.0).all())
         self.assertNotAlmostEquals(rmcube[:, 2, 3].mean(), 0.0)
         self.assertAlmostEquals(rmcube[15, 2, 3],
-                                (3-4j)*exp(2j*self.phi[15]*as_wavelength_squared(self.freq).mean()),
+                                (3-4j)*exp(2j*self.phi[15]*wavelength_squared_m2(self.freq).mean()),
                                 places = 6)
         self.assertEquals(list(rmcube[:, 2, 3] == rmcube.max()).index(True), 15)
 
 
     def test_compute_rmsf(self):
         rmsf   = compute_rmsf(self.freq, self.phi)
-        wl_m   = as_wavelength_squared(self.freq)
+        wl_m   = wavelength_squared_m2(self.freq)
         wl0_m  = wl_m.mean()
         map(self.assertAlmostEquals,
             rmsf,

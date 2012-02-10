@@ -1,3 +1,8 @@
+r'''
+The ``main`` module implements the actual RM-synthesis.
+'''
+
+
 from numpy import array, exp, zeros, newaxis, real, imag, complex64
 import gc, os, sys
 
@@ -12,12 +17,49 @@ import rmsynthesis.fits as fits
 
 RMSYNTHESIS_VERSION = '0.9'
 
-class ParseError(Exception):
+class ParseError(RuntimeError):
+    r'''
+    Raised whenever there is a problem with parsing a file.
+    '''
     pass
 
-class ShapeError(Exception):
+class ShapeError(RuntimeError):
+    r'''
+    Raised whenever shapes of FITS cubes are incompatible.
+    '''
     pass
 
+
+def wavelength_squared_m2(freq_hz):
+    r'''
+    Convert *freq_hz* (in Hz) to wavelength squared (in
+    m^2).
+
+    **Parameters**
+
+    freq_hz : scalar or numpy.array
+        The frequencies for which :math:``\lambda^2`` must be computed.
+
+    **Returns**
+
+    A scalar or numpy.array with the same shape as *freq_hz*.
+
+    **Examples**
+
+    >>> c = 299792458.0
+    >>> wavelength_squared_m2(c)
+    1.0
+    >>> wavelength_squared_m2(array([c, c/2.0, c/3.0]))
+    array([ 1.,  4.,  9.])
+    >>> wavelength_squared_m2(array([[c], [c/2.0], [c/3.0]]))
+    array([[ 1.],
+           [ 4.],
+           [ 9.]])
+    >>> wavelength_squared_m2(array([]))
+    array([], dtype=float64)
+
+    '''
+    return (299792458.0/freq_hz)**2
 
 
 def parse_frequency_file(filename):
@@ -40,16 +82,6 @@ def parse_frequency_file(filename):
                                  # except ValueError as err:
                                  # etc...
         raise ParseError('while parsing '+filename+': '+str(err))
-
-
-def as_wavelength_squared(frequencies):
-    """
-    Convert *frequencies* (in Hz) to wavelength squared (in
-    m^2). Accepts a scalar value as well as arrays. The return value
-    has the same shape as *frequencies*.
-    """
-    return (299792458.0/frequencies)**2
-
 
 
     
@@ -105,7 +137,7 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     before with the help of the proper_fits_shapes() function. The
     polarization vectors are derotated to the average lambda^2.
     """
-    wl2       = as_wavelength_squared(frequencies)
+    wl2       = wavelength_squared_m2(frequencies)
     rmcube    = zeros((len(phi_array), qcube.shape[1], qcube.shape[2]),
                       dtype=complex64)
     wl2_0     = wl2.mean()
@@ -134,7 +166,7 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
     before with the help of the proper_fits_shapes() function. The
     polarization vectors are derotated to the average lambda^2.
     """
-    wl2       = as_wavelength_squared(frequencies)
+    wl2       = wavelength_squared_m2(frequencies)
     qheader   = fits.get_header(qname)
     rmcube    = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']),
                       dtype = complex64)
@@ -166,7 +198,7 @@ def compute_rmsf(frequencies, phi_array):
     Compute the Rotation Measure Spread Function, derotating to the
     average lambda^2.
     """
-    wl2   = as_wavelength_squared(frequencies)
+    wl2   = wavelength_squared_m2(frequencies)
     wl2_0 = wl2.mean()
     return array([rmsynthesis_phases((wl2 - wl2_0), phi).mean()
                   for phi in phi_array])
