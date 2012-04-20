@@ -1,0 +1,31 @@
+#
+# doRmSynthesis sets the paths to the rmsynthesis software by Michiel Brentjens
+#
+# Author: M.A. Brentjens (2012-04-20)
+
+if (! ${?APS_LOCAL} ) then
+  tty -s && echo "APS_LOCAL is not set (should be in .cshrc or .bashrc)"
+  exit(1)
+endif
+
+set rmsynth_rootdir = ${APS_LOCAL}/rmsynthesis/rmsynthesis-0.8
+set rmsynth_bindir = ${rmsynth_rootdir}/bin
+set rmsynth_pythondir = ${rmsynth_rootdir}/
+
+if (! ${?PATH} ) then
+  setenv PATH .:${rmsynth_bindir}
+else
+  if ($PATH !~ *${rmsynth_bindir}* && -d $rmsynth_bindir) then
+    setenv PATH ${PATH}:${rmsynth_bindir}
+  endif
+endif
+
+if (! ${?PYTHONPATH} ) then
+  setenv PYTHONPATH .:${rmsynth_pythondir}
+else
+  if ($PYTHONPATH !~ *${rmsynth_pythondir}* && -d $rmsynth_pythondir) then
+    setenv PYTHONPATH ${rmsynth_pythondir}:${PYTHONPATH}
+  endif
+endif
+
+
