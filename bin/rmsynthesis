@@ -76,7 +76,11 @@ def print_help():
     print("""Usage
 -----
 
-rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
+  rmsynthesis [options] <Q-directory> <U-directory>
+
+or
+
+  rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
 
   -o/--output <directory>    Output directory (Default: .)
 

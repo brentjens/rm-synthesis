@@ -3,7 +3,7 @@ The ``main`` module implements the actual RM-synthesis.
 '''
 
 
-from numpy import array, exp, zeros, newaxis, real, imag, complex64
+from numpy import array, complex64, pi, exp, zeros, newaxis, real, imag
 import gc, os, sys
 
 try:
@@ -28,6 +28,60 @@ class ShapeError(RuntimeError):
     Raised whenever shapes of FITS cubes are incompatible.
     '''
     pass
+
+
+
+def almost_equal(x, y, epsilon = 1e-9):
+    r'''
+    Returns True if
+
+    .. math::
+       \frac{|x-y|}{\mathrm{max}(|x|, |y|)} < \epsilon
+
+
+    If either of the numbers is exactly zero, it returns True if the
+    other number's absolute value is below :math:``\epsilon``.
+ 
+    **Parameters**
+
+    x : float or complex
+        One of the numbers to compare.
+
+    y : float or complex
+        The other number to compare.
+
+    epsilon : float
+        Fractional accuracy to which the numbers must be equal.
+
+    **Returns**
+
+    A boolean indicating if ``x`` and ``y`` are almost equal.
+
+    **Examples**
+
+    First the cases when one of the arguments is exactly 0:
+
+    >>> almost_equal(0.0, -1e-8, epsilon = 1e-8)
+    False
+    >>> almost_equal(0.0, -1e-8+1e-12, epsilon = 1e-8)
+    True
+    >>> almost_equal(-1e-9, 0.0)
+    False
+    >>> almost_equal(-1e-9+1e-12, 0.0)
+    True
+
+    
+
+
+    '''
+
+    if x == 0.0:
+        return abs(y) < epsilon
+    if y == 0.0:
+        return abs(x) < epsilon
+    return abs(x - y)/max(abs(x), abs(y)) < epsilon
+
+
 
 
 def wavelength_squared_m2(freq_hz):
@@ -60,6 +114,69 @@ def wavelength_squared_m2(freq_hz):
 
     '''
     return (299792458.0/freq_hz)**2
+
+
+
+
+def phases_lambda2_to_phi(wavelength_squared_m2, phi_rad_m2):
+    r'''
+    Computes the phase factor
+
+    .. math::    
+      \mathrm{e}^{-2\mathrm{i}\phi\lambda^2},
+
+    necessary in the transform from wavelength squared space to
+    Faraday depth space.
+
+    **Parameters**
+
+    wavelength_squared_m2 : scalar or numpy.array
+        Wavelength squared in :math:``m^2``
+
+    phi_rad_m2 : scalar or numpy.array
+        Faraday depth in :math:``\mathrm{rad m}^{-2}``
+
+    **Examples**
+
+    >>> phases_lambda2_to_phi(1.0, pi)
+    1.0
+    >>> phases_lambda2_to_phi(pi/2, 0.5)
+    -1.j
+    >>> phases_lambda2_to_phi(array([pi, 0.5*pi]), 0.5)
+    array([-1., -1.j])
+    >>> phases_lambda2_to_phi(pi, array([0.5, -0.25]))
+    array([-1., 1.j])
+
+    '''
+    return exp(-2j*phi_rad_m2*wavelength_squared_m2)
+
+
+
+def phases_phi_to_lambda2(wavelength_squared_m2, phi_rad_m2):
+    r'''
+    Computes the phase factor
+
+    .. math::    
+      \mathrm{e}^{+2\mathrm{i}\phi\lambda^2},
+
+    necessary in the transform from Faraday depth to wavelength
+    squared space.
+
+    **Parameters**
+
+    wavelength_squared_m2 : scalar or numpy.array
+        Wavelength squared in :math:``m^2``
+
+    phi_rad_m2 : scalar or numpy.array
+        Faraday depth in :math:``\mathrm{rad m}^{-2}``
+
+    **Examples**
+
+    >>>  
+    '''
+    return exp(+2j*phi_rad_m2*wavelength_squared_m2)
+
+
 
 
 def parse_frequency_file(filename):
@@ -119,14 +236,6 @@ def proper_fits_shapes(qname, uname, frequencyname):
         
 
 
-def rmsynthesis_phases(wavelength_squared, phi):
-    """
-    Compute the phase factor exp(-2j*phi*wavelength_squared).
-    """
-    return exp(-2j*phi*wavelength_squared)
-
-
-
 
 def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     """
@@ -147,7 +256,7 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     nfreq = len(frequencies)
     for i, phi in enumerate(phi_array):
         print('processing frame %4d/%d, phi = %7.1f' % (i+1, num, phi))
-        phases = rmsynthesis_phases(wl2-wl2_0, phi)[:, newaxis, newaxis]
+        phases = phases_lambda2_to_phi(wl2-wl2_0, phi)[:, newaxis, newaxis]
         rmcube[i, :, :] = (p_complex*phases).sum(axis=0)/nfreq
     return rmcube
 
@@ -182,7 +291,7 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
         print('processing frame '+str(frame_id+1)+'/'+str(nfreq))
         p_complex = q_frame*q_factor + 1.0j*u_frame*u_factor
         wl2_frame = wl2_norm[frame_id]
-        phases    = rmsynthesis_phases(wl2_frame, phi_array)
+        phases    = phases_lambda2_to_phi(wl2_frame, phi_array)
         for frame, phase in enumerate(phases):
             rmcube[frame, :, :] += p_complex*phase
         frame_id += 1
@@ -200,7 +309,7 @@ def compute_rmsf(frequencies, phi_array):
     """
     wl2   = wavelength_squared_m2(frequencies)
     wl2_0 = wl2.mean()
-    return array([rmsynthesis_phases((wl2 - wl2_0), phi).mean()
+    return array([phases_lambda2_to_phi((wl2 - wl2_0), phi).mean()
                   for phi in phi_array])
 
 
