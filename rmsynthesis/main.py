@@ -15,8 +15,8 @@ except ImportError:
     
 import rmsynthesis.fits as fits
 
-RMSYNTHESIS_VERSION = '1.0-rc1'
-__version__ = '1.0-rc1'
+RMSYNTHESIS_VERSION = '1.0-rc2'
+__version__ = '1.0-rc2'
 
 
 class ParseError(RuntimeError):
@@ -31,6 +31,22 @@ class ShapeError(RuntimeError):
     '''
     pass
 
+
+
+def file_exists(filename, verbose=False):
+    """
+    Returns True oif *filename* exists, False if it does not. If
+    *verbose* is True, it also prints an error message if the file
+    does not exist.
+    """
+    try:
+        os.stat(filename)
+        return True
+    except (OSError,):
+        err = sys.exc_info()[1]
+        if verbose:
+            print('error: '+str(err))
+        return False
 
 
 def almost_equal(x, y, epsilon = 1e-9):

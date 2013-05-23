@@ -5,11 +5,11 @@ from getopt import gnu_getopt as getopt
 from getopt import GetoptError
 import os, sys, time
 
-from rmsynthesis import ShapeError, ParseError, compute_rmsf, write_rmsf
-from rmsynthesis import file_exists, proper_fits_shapes, parse_frequency_file
-from rmsynthesis import wavelength_squared_m2
-from rmsynthesis import rmsynthesis_dirty_lowmem_main
-from rmsynthesis import RMSYNTHESIS_VERSION
+from rmsynthesis.main import ShapeError, ParseError, compute_rmsf, write_rmsf
+from rmsynthesis.main import file_exists, proper_fits_shapes, parse_frequency_file
+from rmsynthesis.main import wavelength_squared_m2_from_freq_hz
+from rmsynthesis.main import rmsynthesis_dirty_lowmem_main
+from rmsynthesis.main import RMSYNTHESIS_VERSION
 
 from numpy import arange, array, ceil, sqrt
 
@@ -256,7 +256,7 @@ def main(argv):
         warn('Frequency file ('+frequencyname+') might be a fits file')
     
     frequencies  = parse_frequency_file(frequencyname)
-    wl2          = wavelength_squared_m2(frequencies)
+    wl2          = wavelength_squared_m2_from_freq_hz(frequencies)
     sorted_wl2   = array(sorted(wl2))
     smallest_dl2 = min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
     if abs(smallest_dl2) == 0.0:
