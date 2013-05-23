@@ -1,11 +1,11 @@
 #!/usr/bin/env python2
+# -*- python -*-
 
 from getopt import gnu_getopt as getopt
 from getopt import GetoptError
 import os, sys, time
 
-from rmsynthesis import ShapeError, ParseError, rmsynthesis_dirty, write_rmcube
-from rmsynthesis import compute_rmsf, write_rmsf, add_phi_to_fits_header
+from rmsynthesis import ShapeError, ParseError, compute_rmsf, write_rmsf
 from rmsynthesis import file_exists, proper_fits_shapes, parse_frequency_file
 from rmsynthesis import wavelength_squared_m2
 from rmsynthesis import rmsynthesis_dirty_lowmem_main
@@ -117,6 +117,9 @@ or
                              factor must be 1.2 if it has not already
                              been applied.
 
+  -m/--max-mem <GB>          Maximum amount of memory to be used in GB.
+                             Default is 2.0.
+
   -v/--version               Display version information.
 
 
@@ -186,16 +189,17 @@ def main(argv):
     if len(argv) == 1:
         return print_help()
     options, arguments = getopt(argv[1:],
-                                'o:l:h:d:q:u:fcv',
+                                'o:l:h:d:q:u:fcvm:',
                                 ['output=',
-                                'low=',
-                                'high=',
-                                'dphi=',
-                                'qfactor=',
-                                'ufactor=',
-                                'force',
-                                'check',
-                                'version'])
+                                 'low=',
+                                 'high=',
+                                 'dphi=',
+                                 'qfactor=',
+                                 'ufactor=',
+                                 'max-mem=',
+                                 'force',
+                                 'check',
+                                 'version'])
     
     # Default values
     
@@ -208,6 +212,7 @@ def main(argv):
     dphi_user_override = False
     qfactor = 1.0
     ufactor = 1.0
+    max_mem_gb = 2.0
     
     for (option, value) in options:
         if   option in ['-o', '--output']:
@@ -223,20 +228,25 @@ def main(argv):
             qfactor = float(value)
         elif option in ['-u', '--ufactor']:
             ufactor = float(value)
+        elif option in ['-m', '--max-mem']:
+            max_mem_gb = float(value)
         elif option in ['-f', '--force']:
             force_overwrite = True
         elif option in ['-c', '--check']:
             check = True
         elif option in ['-v', '--version']:
-            print('rmsynthesis %s (c) 2005-2012 M.A. Brentjens <brentjens@astron.nl>' % RMSYNTHESIS_VERSION)
+            print('rmsynthesis %s (c) 2005-2012 M.A. Brentjens <brentjens@astron.nl>' %
+                  RMSYNTHESIS_VERSION)
             exit(0)
 
     if len(arguments) != 3:
-        raise GetoptError('error: provide Q and U FITS cubes and a text file with frequencies')
+        raise GetoptError(
+            'error: provide Q and U FITS cubes and a frequency text file')
 
     files_exist = [file_exists(arg, verbose = True) for arg in arguments]
     if not all(files_exist):
-        print('error: provide Q and U FITS cubes and a text file with frequencies')
+        print(
+            'error: provide Q and U FITS cubes and a frequency text file')
         return -1
     
     qname, uname, frequencyname = arguments
@@ -269,13 +279,17 @@ def main(argv):
             lowframes = ceil(abs(0-low)/dphi)
             dphi = abs((0-low)*(1.0-1e-15)/(lowframes+1))
         else:
-            ValueError('error: low phi limit ('+str(low)+') must be negative and high phi limit ('+str(high)+') positive')
+            ValueError('error: low phi limit ('+str(low)+
+                       ') must be negative and high phi limit ('+str(high)+
+                       ') positive')
 
     if qfactor == 0:
         warn('Q factor is 0.0')
     if ufactor == 0:
         warn('U factor is 0.0')
-    
+    if max_mem_gb < 0.5:
+        warn('Maximum allowed memory is < 500 MB')
+
     rmcube_name = os.path.join(output, '{p-,q-,u-}rmcube-dirty.fits')
     rmsf_name   = os.path.join(output, 'rmsf.txt')
     log_name    = os.path.join(output, 'rmsynthesis.log')
@@ -305,9 +319,11 @@ def main(argv):
 
     if file_exists(log_name):
         if force_overwrite:
-            print('warning: file '+log_name+' already exists; it will be overwritten')
+            print('warning: file %s already exists; it will be overwritten' %
+                  log_name)
         else:
-            print('error: file '+log_name+' already exists; use --force to overwrite')
+            print('error: file %s already exists; use --force to overwrite' %
+                  log_name)
             return -1
 
     if not proper_fits_shapes(qname, uname, frequencyname):
@@ -328,16 +344,11 @@ def main(argv):
     # Finally, do the work...
     
     if not check:
-        # qheader, qcube = get_fits_header_data(qname)
-        # uheader, ucube = get_fits_header_data(uname)
-        # qcube *= qfactor
-        # ucube *= ufactor
-        # rmcube = rmsynthesis_dirty(qcube,
-        #                            ucube,
-        #                            frequencies, phi)
-        # write_rmcube(rmcube, add_phi_to_fits_header(qheader, phi),
-        #              output, force_overwrite)
-        rmsynthesis_dirty_lowmem_main(qname, uname, qfactor, ufactor, output, frequencies, phi, force_overwrite)
+        rmsynthesis_dirty_lowmem_main(qname,   uname,
+                                      qfactor, ufactor,
+                                      output, frequencies,
+                                      phi, force_overwrite,
+                                      max_mem_gb)
         rmsf = compute_rmsf(frequencies, phi)
         write_rmsf(phi, rmsf, output)
     return 0
