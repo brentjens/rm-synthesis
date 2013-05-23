@@ -3,7 +3,7 @@ The ``main`` module implements the actual RM-synthesis.
 '''
 
 
-from numpy import array, complex64, pi, exp, zeros, newaxis, real, imag
+from numpy import array, complex64, exp, zeros, newaxis, real, imag, floor
 import gc, os, sys
 
 try:
@@ -15,7 +15,9 @@ except ImportError:
     
 import rmsynthesis.fits as fits
 
-RMSYNTHESIS_VERSION = '0.9'
+RMSYNTHESIS_VERSION = '1.0-rc1'
+__version__ = '1.0-rc1'
+
 
 class ParseError(RuntimeError):
     r'''
@@ -69,10 +71,6 @@ def almost_equal(x, y, epsilon = 1e-9):
     False
     >>> almost_equal(-1e-9+1e-12, 0.0)
     True
-
-    
-
-
     '''
 
     if x == 0.0:
@@ -84,7 +82,7 @@ def almost_equal(x, y, epsilon = 1e-9):
 
 
 
-def wavelength_squared_m2(freq_hz):
+def wavelength_squared_m2_from_freq_hz(freq_hz):
     r'''
     Convert *freq_hz* (in Hz) to wavelength squared (in
     m^2).
@@ -101,15 +99,15 @@ def wavelength_squared_m2(freq_hz):
     **Examples**
 
     >>> c = 299792458.0
-    >>> wavelength_squared_m2(c)
+    >>> wavelength_squared_m2_from_freq_hz(c)
     1.0
-    >>> wavelength_squared_m2(array([c, c/2.0, c/3.0]))
+    >>> wavelength_squared_m2_from_freq_hz(array([c, c/2.0, c/3.0]))
     array([ 1.,  4.,  9.])
-    >>> wavelength_squared_m2(array([[c], [c/2.0], [c/3.0]]))
+    >>> wavelength_squared_m2_from_freq_hz(array([[c], [c/2.0], [c/3.0]]))
     array([[ 1.],
            [ 4.],
            [ 9.]])
-    >>> wavelength_squared_m2(array([]))
+    >>> wavelength_squared_m2_from_freq_hz(array([]))
     array([], dtype=float64)
 
     '''
@@ -246,7 +244,7 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     before with the help of the proper_fits_shapes() function. The
     polarization vectors are derotated to the average lambda^2.
     """
-    wl2       = wavelength_squared_m2(frequencies)
+    wl2       = wavelength_squared_m2_from_freq_hz(frequencies)
     rmcube    = zeros((len(phi_array), qcube.shape[1], qcube.shape[2]),
                       dtype=complex64)
     wl2_0     = wl2.mean()
@@ -275,13 +273,12 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
     before with the help of the proper_fits_shapes() function. The
     polarization vectors are derotated to the average lambda^2.
     """
-    wl2       = wavelength_squared_m2(frequencies)
+    wl2       = wavelength_squared_m2_from_freq_hz(frequencies)
     qheader   = fits.get_header(qname)
     rmcube    = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']),
                       dtype = complex64)
     wl2_0     = wl2.mean()
     
-    num      = len(phi_array)
     nfreq    = len(frequencies)
     q_frames = fits.image_frames(qname)
     u_frames = fits.image_frames(uname)
@@ -307,7 +304,7 @@ def compute_rmsf(frequencies, phi_array):
     Compute the Rotation Measure Spread Function, derotating to the
     average lambda^2.
     """
-    wl2   = wavelength_squared_m2(frequencies)
+    wl2   = wavelength_squared_m2_from_freq_hz(frequencies)
     wl2_0 = wl2.mean()
     return array([phases_lambda2_to_phi((wl2 - wl2_0), phi).mean()
                   for phi in phi_array])
@@ -399,21 +396,51 @@ def output_pqu_headers(fits_header):
 
 def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                                   output_dir, freq_hz, phi_rad_m2,
-                                  force_overwrite):
+                                  force_overwrite, max_mem_gb = 2.0):
     r'''
     '''
-    q_header      = fits.get_header(q_name)
+    q_header         = fits.get_header(q_name)
+    pixels_per_frame = q_header['NAXIS1']*q_header['NAXIS2']
+
+    max_mem_bytes          = max_mem_gb*1024**3
+    bytes_per_output_pixel = 4
+    max_output_pixels      = max_mem_bytes/bytes_per_output_pixel
+    # 7 = (re, im) + (re, im) temp space + p_out + q_out + u_out
+    block_length           = int(floor(max_output_pixels/pixels_per_frame/7.0))
+    num_blocks             = len(phi_rad_m2)/block_length
+    if len(phi_rad_m2) % block_length > 0:
+        num_blocks += 1
+
+
     output_header = add_phi_to_fits_header(q_header.copy(), phi_rad_m2)
     p_out_name, q_out_name, u_out_name = output_pqu_fits_names(output_dir)
     p_out_hdr , q_out_hdr , u_out_hdr  = output_pqu_headers(output_header)
+    p_out, q_out, u_out = [fits.streaming_output_hdu(fits_name,
+                                                     header,
+                                                     force_overwrite)
+                           for fits_name, header in [(p_out_name, p_out_hdr),
+                                                     (q_out_name, q_out_hdr),
+                                                     (u_out_name, u_out_hdr)]]
 
-    rmcube = rmsynthesis_dirty_lowmem(q_name, u_name, q_factor, u_factor,
-                                      freq_hz, phi_rad_m2)
+    for block in range(num_blocks):
+        phi = phi_rad_m2[block*block_length:(block+1)*block_length]
+        print 'Processing block %d / %d' % (block + 1, num_blocks)
+        print 'Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1])
+        rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
+                                          q_factor, u_factor,
+                                          freq_hz, phi)
+        p_out.write(abs(rmcube))
+        q_out.write(real(rmcube))
+        u_out.write(imag(rmcube))
 
-    fits.write_cube(p_out_name, p_out_hdr,  abs(rmcube),
-                    force_overwrite = force_overwrite)
-    fits.write_cube(q_out_name, q_out_hdr, real(rmcube),
-                    force_overwrite = force_overwrite)
-    fits.write_cube(u_out_name, u_out_hdr, imag(rmcube),
-                    force_overwrite = force_overwrite)
+    p_out.close()
+    q_out.close()
+    u_out.close()
+
+    # fits.write_cube(p_out_name, p_out_hdr,  abs(rmcube),
+    #                 force_overwrite = force_overwrite)
+    # fits.write_cube(q_out_name, q_out_hdr, real(rmcube),
+    #                 force_overwrite = force_overwrite)
+    # fits.write_cube(u_out_name, u_out_hdr, imag(rmcube),
+    #                 force_overwrite = force_overwrite)
     
