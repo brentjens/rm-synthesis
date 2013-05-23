@@ -136,14 +136,15 @@ def phases_lambda2_to_phi(wavelength_squared_m2, phi_rad_m2):
 
     **Examples**
 
-    >>> phases_lambda2_to_phi(1.0, pi)
-    1.0
-    >>> phases_lambda2_to_phi(pi/2, 0.5)
-    -1.j
-    >>> phases_lambda2_to_phi(array([pi, 0.5*pi]), 0.5)
-    array([-1., -1.j])
-    >>> phases_lambda2_to_phi(pi, array([0.5, -0.25]))
-    array([-1., 1.j])
+    >>> from math import pi
+    >>> almost_equal(phases_lambda2_to_phi(1.0, pi), 1.0)
+    True
+    >>> almost_equal(phases_lambda2_to_phi(pi/2, 0.5), -1.j)
+    True
+    >>> map(almost_equal, phases_lambda2_to_phi(array([pi, 0.5*pi]), 0.5), [-1., -1.j])
+    [True, True]
+    >>> map(almost_equal, phases_lambda2_to_phi(pi, array([0.5, -0.25])), [-1., +1.j])
+    [True, True]
 
     '''
     return exp(-2j*phi_rad_m2*wavelength_squared_m2)
