@@ -235,7 +235,7 @@ def main(argv):
         elif option in ['-c', '--check']:
             check = True
         elif option in ['-v', '--version']:
-            print('rmsynthesis %s (c) 2005-2012 M.A. Brentjens <brentjens@astron.nl>' %
+            print('rmsynthesis %s (c) 2005-2013 M.A. Brentjens <brentjens@astron.nl>' %
                   RMSYNTHESIS_VERSION)
             exit(0)
 
@@ -360,7 +360,7 @@ if __name__ == "__main__":
     try:
         exit(main(sys.argv))
     except (OSError, IOError):
-        print('error: '+sys.exc_info()[1])
+        print('error: '+str(sys.exc_info()[1]))
         exit(-1)
     except (GetoptError, ParseError, ShapeError):
         print(sys.exc_info()[1])

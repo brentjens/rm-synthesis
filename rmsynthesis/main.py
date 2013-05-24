@@ -422,8 +422,8 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
     max_mem_bytes          = max_mem_gb*1024**3
     bytes_per_output_pixel = 4
     max_output_pixels      = max_mem_bytes/bytes_per_output_pixel
-    # 7 = (re, im) + (re, im) temp space + p_out + q_out + u_out
-    block_length           = int(floor(max_output_pixels/pixels_per_frame/7.0))
+    # 7 = (re, im) + p_out + q_out + u_out
+    block_length           = int(floor(max_output_pixels/pixels_per_frame/5.0))
     num_blocks             = len(phi_rad_m2)/block_length
     if len(phi_rad_m2) % block_length > 0:
         num_blocks += 1

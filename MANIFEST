@@ -5,6 +5,7 @@ README
 run-tests.sh
 setup.py
 bin/rmsynthesis
+doc/.coverage
 doc/Makefile
 doc/make.bat
 doc/build/doctest/output.txt
@@ -54,6 +55,19 @@ doc/build/html/_static/underscore.js
 doc/build/html/_static/up-pressed.png
 doc/build/html/_static/up.png
 doc/build/html/_static/websupport.js
+doc/coverage/coverage_html.js
+doc/coverage/index.html
+doc/coverage/jquery-1.4.3.min.js
+doc/coverage/jquery.hotkeys.js
+doc/coverage/jquery.isonscreen.js
+doc/coverage/jquery.tablesorter.min.js
+doc/coverage/keybd_closed.png
+doc/coverage/keybd_open.png
+doc/coverage/rmsynthesis.html
+doc/coverage/rmsynthesis_fits.html
+doc/coverage/rmsynthesis_main.html
+doc/coverage/status.dat
+doc/coverage/style.css
 doc/rmsynthesis/__init__.py
 doc/rmsynthesis/__init__.pyc
 doc/rmsynthesis/fits.py
@@ -76,3 +90,8 @@ rmsynthesis/__init__.py
 rmsynthesis/fits.py
 rmsynthesis/main.py
 test/testrmsynthesismain.py
+testdata/Q_Fthinsource.fits
+testdata/U_Fthinsource.fits
+testdata/freq_Fthinsource.txt
+testdata/frequencies-parse-error.txt
+testdata/frequencies.txt
