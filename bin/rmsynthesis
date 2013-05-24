@@ -118,7 +118,7 @@ or
                              been applied.
 
   -m/--max-mem <GB>          Maximum amount of memory to be used in GB.
-                             Default is 2.0.
+                             Default is %.1f GB.
 
   -v/--version               Display version information.
 
@@ -171,11 +171,29 @@ otherwise specified with the -o option.
 
 - rmsynthesis.log     Contains the command line options used to obtain
                       this output.
-""")
+""" % max_memory_gb())
     return -1
 
 
 
+def max_memory_gb(fraction=0.8):
+    r'''
+    Determine the maximum amount of memory available for RM synthesis
+    '''
+    if os.path.exists('/proc/meminfo'):
+        words = [line for line in open('/proc/meminfo').readlines()
+                 if 'MemTotal'.lower() in line.lower()][0].split()[1:]
+        mem   = float(words[0])
+        if words[1] == 'kB':
+            mem *= 1024
+        else:
+            raise ValueError('Do not know how to handle memory in %s' % words[1])
+        return fraction*mem/(1024**3)
+    else:
+        return 3.0
+        
+
+    
 
 
 
@@ -212,7 +230,7 @@ def main(argv):
     dphi_user_override = False
     qfactor = 1.0
     ufactor = 1.0
-    max_mem_gb = 2.0
+    max_mem_gb = max_memory_gb(fraction = 0.8)
     
     for (option, value) in options:
         if   option in ['-o', '--output']:
