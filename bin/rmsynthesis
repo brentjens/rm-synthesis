@@ -53,6 +53,7 @@ def print_summary(argv, **kwargs):
     print('')
     print('Command'.ljust(key_width)+': '+' '.join(argv))
     print('Working dir'.ljust(key_width)+': '+os.getcwdu())
+    print('Max mem'.ljust(key_width)+': '+'%.1f GB' % kwargs['max_mem_gb'])
     print('')
 
     prkv('Q cube', kwargs['qname'])
@@ -328,7 +329,8 @@ def main(argv):
                       rmcube_name   = rmcube_name,
                       rmsf_name     = rmsf_name,
                       log_name      = log_name,
-                      check         = check)
+                      check         = check,
+                      max_mem_gb    = max_mem_gb)
 
     summary()
 
@@ -390,4 +392,7 @@ if __name__ == "__main__":
         print('not fit in memory together with the intermediate results. Please make the')
         print('cubes smaller or kindly ask the author for an upgrade.')
         print('use "'+sys.argv[0]+'" for help.')
+        exit(-1)
+    except (KeyboardInterrupt, ):
+        print('')
         exit(-1)
