@@ -15,8 +15,8 @@ except ImportError:
     
 import rmsynthesis.fits as fits
 
-RMSYNTHESIS_VERSION = '1.0-rc2'
-__version__ = '1.0-rc2'
+RMSYNTHESIS_VERSION = '1.0-rc3'
+__version__ = '1.0-rc3'
 
 
 class ParseError(RuntimeError):
