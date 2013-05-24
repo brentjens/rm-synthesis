@@ -438,26 +438,18 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                            for fits_name, header in [(p_out_name, p_out_hdr),
                                                      (q_out_name, q_out_hdr),
                                                      (u_out_name, u_out_hdr)]]
-
-    for block in range(num_blocks):
-        phi = phi_rad_m2[block*block_length:(block+1)*block_length]
-        print 'Processing block %d / %d' % (block + 1, num_blocks)
-        print 'Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1])
-        rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
-                                          q_factor, u_factor,
-                                          freq_hz, phi)
-        p_out.write(abs(rmcube))
-        q_out.write(real(rmcube))
-        u_out.write(imag(rmcube))
-
-    p_out.close()
-    q_out.close()
-    u_out.close()
-
-    # fits.write_cube(p_out_name, p_out_hdr,  abs(rmcube),
-    #                 force_overwrite = force_overwrite)
-    # fits.write_cube(q_out_name, q_out_hdr, real(rmcube),
-    #                 force_overwrite = force_overwrite)
-    # fits.write_cube(u_out_name, u_out_hdr, imag(rmcube),
-    #                 force_overwrite = force_overwrite)
-    
+    try:
+        for block in range(num_blocks):
+            phi = phi_rad_m2[block*block_length:(block+1)*block_length]
+            print 'Processing block %d / %d' % (block + 1, num_blocks)
+            print 'Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1])
+            rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
+                                              q_factor, u_factor,
+                                              freq_hz, phi)
+            p_out.write(abs(rmcube))
+            q_out.write(real(rmcube))
+            u_out.write(imag(rmcube))
+    finally:
+        p_out.close()
+        q_out.close()
+        u_out.close()
