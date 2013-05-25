@@ -4,7 +4,9 @@ The ``main`` module implements the actual RM-synthesis.
 
 
 from numpy import array, complex64, exp, zeros, newaxis, real, imag, floor
-import gc, os, sys
+from numpy import array_split, concatenate, frombuffer, add, multiply
+import multiprocessing as mp
+import gc, os, sys, ctypes
 
 try:
     from itertools import izip
@@ -35,7 +37,7 @@ class ShapeError(RuntimeError):
 
 def file_exists(filename, verbose=False):
     """
-    Returns True oif *filename* exists, False if it does not. If
+    Returns True if *filename* exists, False if it does not. If
     *verbose* is True, it also prints an error message if the file
     does not exist.
     """
@@ -316,6 +318,84 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
 
 
 
+def rmsynthesis_worker(queue, shared_arr, frame_shape, phi_array):
+    r'''
+    '''
+    rmcube = zeros((len(phi_array),)+frame_shape,
+                   dtype = complex64)
+    p_complex = frombuffer(shared_arr.get_obj(), dtype=complex64).reshape(frame_shape)
+
+    while True:
+        item = queue.get()
+        if item is None:
+            queue.put(rmcube)
+            break
+        else:
+            wl2_frame = item
+            phases    = phases_lambda2_to_phi(wl2_frame, phi_array)
+            for frame, phase in enumerate(phases):
+                rmcube[frame, :, :] += p_complex*phase
+            gc.collect()
+            queue.task_done()
+
+
+def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor, 
+                                frequencies, phi_array):
+    """
+    Perform an RM synthesis on Q and U image cubes with given
+    frequencies. The rmcube that is returned is complex valued and has
+    a frame for every value in phi_array. It is assumed that the
+    dimensions of qcube, ucube, and frequencies have been verified
+    before with the help of the proper_fits_shapes() function. The
+    polarization vectors are derotated to the average lambda^2.
+
+    Uses the multiprocessing module to speed up the calculations.
+    """
+    num_workers  = mp.cpu_count()-1
+    
+    wl2       = wavelength_squared_m2_from_freq_hz(frequencies)
+    qheader   = fits.get_header(qname)
+    wl2_0     = wl2.mean()
+    
+    nfreq    = len(frequencies)
+    q_frames = fits.image_frames(qname)
+    u_frames = fits.image_frames(uname)
+    frame_id = 0
+    wl2_norm = wl2 - wl2_0 
+
+    phi_arrays  = array_split(phi_array, num_workers)
+    frame_shape = (qheader['NAXIS2'], qheader['NAXIS1'])
+    mp_shared_p_complex = mp.Array(ctypes.c_float, frame_shape[0]*frame_shape[1]*2)
+    p_complex = frombuffer(mp_shared_p_complex.get_obj(), dtype=complex64).reshape(frame_shape)
+
+    queues      = [mp.JoinableQueue() for i in range(num_workers)]
+    workers     = [mp.Process(target=rmsynthesis_worker,
+                              args=(queue, mp_shared_p_complex, frame_shape, phi))
+                   for queue, phi in zip(queues, phi_arrays)]
+    for worker in workers:
+        worker.daemon=True
+        worker.start()
+
+    for q_frame, u_frame in izip(q_frames, u_frames):
+        print('processing frame '+str(frame_id+1)+'/'+str(nfreq))
+        p_complex[:,:] = q_frame*q_factor + 1.0j*u_frame*u_factor
+        wl2_frame = wl2_norm[frame_id]
+        
+        [queue.put(wl2_frame) for queue in queues]
+        [queue.join() for queue in queues]
+        frame_id += 1
+        gc.collect()
+    [queue.put(None) for queue in queues]
+    print 'Collecting partial results'
+    partial_rmcubes = [queue.get() for queue in queues]
+    rmcube   = concatenate(partial_rmcubes)/nfreq
+    for worker in workers:
+        worker.join()
+    gc.collect()
+    return rmcube
+
+
+
 def compute_rmsf(frequencies, phi_array):
     """
     Compute the Rotation Measure Spread Function, derotating to the
@@ -443,9 +523,10 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
             phi = phi_rad_m2[block*block_length:(block+1)*block_length]
             print 'Processing block %d / %d' % (block + 1, num_blocks)
             print 'Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1])
-            rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
+            rmcube = rmsynthesis_dirty_lowmem_mp(q_name, u_name,
                                               q_factor, u_factor,
                                               freq_hz, phi)
+            print 'Saving data'
             p_out.write(abs(rmcube))
             q_out.write(real(rmcube))
             u_out.write(imag(rmcube))
@@ -453,3 +534,4 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
         p_out.close()
         q_out.close()
         u_out.close()
+        print 'Done'
