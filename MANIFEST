@@ -70,6 +70,8 @@ doc/coverage/status.dat
 doc/coverage/style.css
 doc/rmsynthesis/__init__.py
 doc/rmsynthesis/__init__.pyc
+doc/rmsynthesis/_rmsynth.c
+doc/rmsynthesis/_rmsynth.c~
 doc/rmsynthesis/fits.py
 doc/rmsynthesis/fits.pyc
 doc/rmsynthesis/fits.py~
