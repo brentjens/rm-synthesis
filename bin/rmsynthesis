@@ -313,7 +313,7 @@ def main(argv):
     rmsf_name   = os.path.join(output, 'rmsf.txt')
     log_name    = os.path.join(output, 'rmsynthesis.log')
 
-    phi = arange(low, high, dphi)
+    phi = arange(low, high+dphi*0.1, dphi)
 
 
     def summary():
