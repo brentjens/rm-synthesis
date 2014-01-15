@@ -480,12 +480,15 @@ def output_pqu_headers(fits_header):
     '''
     p_hdr = fits_header.copy()
     p_hdr.update('POL', 'P')
+    p_hdr.update('BITPIX', -32)
     
     q_hdr = fits_header.copy()
     q_hdr.update('POL', 'Q')
+    q_hdr.update('BITPIX', -32)
     
     u_hdr = fits_header.copy()
     u_hdr.update('POL', 'U')
+    u_hdr.update('BITPIX', -32)
     
     return  p_hdr, q_hdr, u_hdr
 
@@ -527,6 +530,7 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                                               q_factor, u_factor,
                                               freq_hz, phi)
             print 'Saving data'
+            
             p_out.write(abs(rmcube))
             q_out.write(real(rmcube))
             u_out.write(imag(rmcube))
