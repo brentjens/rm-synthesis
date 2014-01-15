@@ -51,7 +51,11 @@ def print_summary(argv, **kwargs):
     print('------------------------')
     print('')
     print('Command'.ljust(key_width)+': '+' '.join(argv))
-    print('Working dir'.ljust(key_width)+': '+os.getcwdu())
+    if sys.version_info.major == 2 and sys.version_info.minor >= 3:
+        print('Working dir'.ljust(key_width)+': '+os.getcwdu())
+    else:
+        print('Working dir'.ljust(key_width)+': '+os.getcwd())
+
     print('Max mem'.ljust(key_width)+': '+'%.1f GB' % kwargs['max_mem_gb'])
     print('')
 

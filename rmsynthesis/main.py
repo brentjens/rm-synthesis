@@ -395,7 +395,7 @@ def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor,
         gc.collect()
     for queue in queues:
         queue.put(None)
-    print 'Collecting partial results'
+    print('Collecting partial results')
     partial_rmcubes = [queue.get() for queue in queues]
     rmcube = concatenate(partial_rmcubes)/nfreq
     for worker in workers:
@@ -518,7 +518,7 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
     max_output_pixels = max_mem_bytes/bytes_per_output_pixel
     # 7 = (re, im) + p_out + q_out + u_out
     block_length = int(floor(max_output_pixels/pixels_per_frame/5.0))
-    num_blocks = len(phi_rad_m2)/block_length
+    num_blocks = int(floor(len(phi_rad_m2)/block_length))
     if len(phi_rad_m2) % block_length > 0:
         num_blocks += 1
 
@@ -535,12 +535,12 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
     try:
         for block in range(num_blocks):
             phi = phi_rad_m2[block*block_length:(block+1)*block_length]
-            print 'Processing block %d / %d' % (block + 1, num_blocks)
-            print 'Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1])
+            print('Processing block %d / %d' % (block + 1, num_blocks))
+            print('Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1]))
             rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
                                               q_factor, u_factor,
                                               freq_hz, phi)
-            print 'Saving data'
+            print('Saving data')
 
             p_out.write(absolute(rmcube))
             q_out.write(rmcube.real)
@@ -549,4 +549,4 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
         p_out.close()
         q_out.close()
         u_out.close()
-        print 'Done'
+        print('Done')
