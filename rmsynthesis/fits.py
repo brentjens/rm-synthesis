@@ -2,7 +2,7 @@ r'''
 A collection of small utilities to interface with ``pyfits``.
 '''
 
-from numpy import product, fromfile
+from numpy import fromfile, product #pylint: disable=no-name-in-module
 import pyfits, os, sys
 
 
@@ -27,27 +27,26 @@ def get_header(fits_name):
 
     **Example**
 
-    >>> print(get_header('testdata/Q_Fthinsource.fits'))
-    SIMPLE  =                    T / Written by IDL:  Tue Sep 28 22:42:54 2010      
-    BITPIX  =                  -32 / Number of bits per data pixel                  
-    NAXIS   =                    3 / Number of data axes                            
-    NAXIS1  =                  100 /                                                
-    NAXIS2  =                  100 /                                                
-    NAXIS3  =                  100 /                                                
-    DATE    = '2010-09-28'         / Creation UTC (CCCC-MM-DD) date of FITS header  
-    COMMENT FITS (Flexible Image Transport System) format is defined in 'Astronomy  
-    COMMENT and Astrophysics', volume 376, page 359; bibcode 2001A&A...376..359H    
-    CTYPE1  = 'X       '           /                                                
-    CRVAL1  =                    0 /                                                
-    CDELT1  =          1.30000E+06 /                                                
-    CRPIX1  =                    0 /                                                
-    CUNIT1  = 'Hz      '           /                                                
-    CTYPE2  = 'Y       '           /                                                
-    CRVAL2  =                    0 /                                                
-    CRVAL3  =          1.10000E+08 /                                                
-    POL     = 'Q       '           /                                                
-
-    >>> print(get_header('testdata/non-existent.fits'))
+    >>> get_header('testdata/Q_Fthinsource.fits').cards
+    ('SIMPLE', True, 'Written by IDL:  Tue Sep 28 22:42:54 2010')
+    ('BITPIX', -32, 'Number of bits per data pixel')
+    ('NAXIS', 3, 'Number of data axes')
+    ('NAXIS1', 100, '')
+    ('NAXIS2', 100, '')
+    ('NAXIS3', 100, '')
+    ('DATE', '2010-09-28', 'Creation UTC (CCCC-MM-DD) date of FITS header')
+    ('COMMENT', "FITS (Flexible Image Transport System) format is defined in 'Astronomy", '')
+    ('COMMENT', "and Astrophysics', volume 376, page 359; bibcode 2001A&A...376..359H", '')
+    ('CTYPE1', 'X', '')
+    ('CRVAL1', 0, '')
+    ('CDELT1', 1300000.0, '')
+    ('CRPIX1', 0, '')
+    ('CUNIT1', 'Hz', '')
+    ('CTYPE2', 'Y', '')
+    ('CRVAL2', 0, '')
+    ('CRVAL3', 110000000.0, '')
+    ('POL', 'Q', '')
+    >>> get_header('testdata/non-existent.fits')
     Traceback (most recent call last):
     ...
     IOError: File does not exist: 'testdata/non-existent.fits'
@@ -76,30 +75,12 @@ def get_header_data(fits_name):
     **Example**
 
     >>> hdr, data = get_header_data('testdata/Q_Fthinsource.fits')
-    >>> print(hdr)
-    SIMPLE  =                    T / Written by IDL:  Tue Sep 28 22:42:54 2010      
-    BITPIX  =                  -32 / Number of bits per data pixel                  
-    NAXIS   =                    3 / Number of data axes                            
-    NAXIS1  =                  100 /                                                
-    NAXIS2  =                  100 /                                                
-    NAXIS3  =                  100 /                                                
-    DATE    = '2010-09-28'         / Creation UTC (CCCC-MM-DD) date of FITS header  
-    COMMENT FITS (Flexible Image Transport System) format is defined in 'Astronomy  
-    COMMENT and Astrophysics', volume 376, page 359; bibcode 2001A&A...376..359H    
-    CTYPE1  = 'X       '           /                                                
-    CRVAL1  =                    0 /                                                
-    CDELT1  =          1.30000E+06 /                                                
-    CRPIX1  =                    0 /                                                
-    CUNIT1  = 'Hz      '           /                                                
-    CTYPE2  = 'Y       '           /                                                
-    CRVAL2  =                    0 /                                                
-    CRVAL3  =          1.10000E+08 /                                                
-    POL     = 'Q       '           /                                                
-
+    >>> get_header('testdata/Q_Fthinsource.fits') == hdr
+    True
     >>> data.shape
     (100, 100, 100)
 
-    FITS single floats are big endian 32 bit numbers.
+    FITS single floats are big endian 32 bit numbers:
     >>> str(data.dtype)
     '>f4'
 
@@ -111,7 +92,7 @@ def get_header_data(fits_name):
     >>> get_header_data('testdata/non-existent.fits')
     Traceback (most recent call last):
     ...
-    IOError: [Errno 2] No such file or directory: 'testdata/non-existent.fits'
+    IOError: File does not exist: 'testdata/non-existent.fits'
 
     '''
     return pyfits.getheader(fits_name), pyfits.getdata(fits_name)
@@ -144,7 +125,7 @@ def get_data_offset_length(fits_name):
     (2880, 4000320)
     '''
     hdulist = pyfits.open(fits_name)
-    info    = hdulist.fileinfo(0)
+    info = hdulist.fileinfo(0)
     hdulist.close()
     return info['datLoc'], info['datSpan']
 
@@ -184,8 +165,8 @@ def image_frames(fits_name):
 
     '''
     header = get_header(fits_name)
-    dtype  = pyfits.hdu.PrimaryHDU.NumCode[header['BITPIX']]
-    shape  = (header['NAXIS2'], header['NAXIS1'])
+    dtype = pyfits.hdu.PrimaryHDU.NumCode[header['BITPIX']]
+    shape = (header['NAXIS2'], header['NAXIS1'])
     frame_size = product(shape)*abs(header['BITPIX']/8)
 
     data_start, data_length = get_data_offset_length(fits_name)
@@ -194,8 +175,8 @@ def image_frames(fits_name):
     try:
         while file_stream.tell() +frame_size < data_start + data_length:
             frame = fromfile(file_stream,
-                             count = product(shape),
-                             dtype = dtype).reshape(shape)
+                             count=product(shape),
+                             dtype=dtype).reshape(shape)
             if sys.byteorder == 'little':
                 yield frame.byteswap()
             else:
@@ -250,25 +231,9 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
     >>> os.stat(fits_name).st_size
     4003200
     >>> hdr2, data2 = get_header_data(fits_name)
-    >>> print(hdr2)
-    SIMPLE  =                    T / Written by IDL:  Tue Sep 28 22:42:54 2010      
-    BITPIX  =                  -32 / Number of bits per data pixel                  
-    NAXIS   =                    3 / Number of data axes                            
-    NAXIS1  =                  100 /                                                
-    NAXIS2  =                  100 /                                                
-    NAXIS3  =                  100 /                                                
-    DATE    = '2010-09-28'         / Creation UTC (CCCC-MM-DD) date of FITS header  
-    COMMENT FITS (Flexible Image Transport System) format is defined in 'Astronomy  
-    COMMENT and Astrophysics', volume 376, page 359; bibcode 2001A&A...376..359H    
-    CTYPE1  = 'X       '           /                                                
-    CRVAL1  =                    0 /                                                
-    CDELT1  =          1.30000E+06 /                                                
-    CRPIX1  =                    0 /                                                
-    CUNIT1  = 'Hz      '           /                                                
-    CTYPE2  = 'Y       '           /                                                
-    CRVAL2  =                    0 /                                                
-    CRVAL3  =          1.10000E+08 /                                                
-    POL     = 'Q       '           /                                                
+    >>> hdr2 == hdr
+    True
+
     >>> (data2 == data).all()
     True
 
@@ -309,7 +274,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
     return pyfits.core.StreamingHDU(fits_name, fits_header)
 
 
-def write_cube(fits_name, fits_header, data, force_overwrite = False):
+def write_cube(fits_name, fits_header, data, force_overwrite=False):
     r'''
     Write an image cube to a FITS file containing only one HDU.
 
@@ -346,25 +311,8 @@ def write_cube(fits_name, fits_header, data, force_overwrite = False):
     >>> hdr, data = get_header_data('testdata/Q_Fthinsource.fits')
     >>> write_cube(fits_name, hdr, data)
     >>> hdr2, data2 = get_header_data(fits_name)
-    >>> print(hdr2)
-    SIMPLE  =                    T / Written by IDL:  Tue Sep 28 22:42:54 2010      
-    BITPIX  =                  -32 / Number of bits per data pixel                  
-    NAXIS   =                    3 / Number of data axes                            
-    NAXIS1  =                  100                                                  
-    NAXIS2  =                  100                                                  
-    NAXIS3  =                  100                                                  
-    DATE    = '2010-09-28'         / Creation UTC (CCCC-MM-DD) date of FITS header  
-    COMMENT FITS (Flexible Image Transport System) format is defined in 'Astronomy  
-    COMMENT and Astrophysics', volume 376, page 359; bibcode 2001A&A...376..359H    
-    CTYPE1  = 'X       '           /                                                
-    CRVAL1  =                    0 /                                                
-    CDELT1  =          1.30000E+06 /                                                
-    CRPIX1  =                    0 /                                                
-    CUNIT1  = 'Hz      '           /                                                
-    CTYPE2  = 'Y       '           /                                                
-    CRVAL2  =                    0 /                                                
-    CRVAL3  =          1.10000E+08 /                                                
-    POL     = 'Q       '           /                                                
+    >>> hdr2 == hdr
+    True
 
     >>> (data2 == data).all()
     True
@@ -377,7 +325,6 @@ def write_cube(fits_name, fits_header, data, force_overwrite = False):
     >>> import time
     >>> current_time = time.time()
     >>> write_cube(fits_name, hdr, data, force_overwrite = True)
-    Overwriting existing file 'testdata/write_cube_output.fits'.
     >>> os.path.exists(fits_name)
     True
     >>> os.stat(fits_name).st_size
@@ -387,10 +334,10 @@ def write_cube(fits_name, fits_header, data, force_overwrite = False):
     >>> os.remove(fits_name)
 
     '''
-    hdulist    = pyfits.HDUList()
-    hdu        = pyfits.PrimaryHDU()
+    hdu = pyfits.PrimaryHDU()
     hdu.header = fits_header
-    hdu.data   = data
+    hdu.data = data
+    hdulist = pyfits.HDUList()
     hdulist.append(hdu)
-    hdulist.writeto(fits_name, clobber = force_overwrite)
+    hdulist.writeto(fits_name, clobber=force_overwrite)
     hdulist.close()
