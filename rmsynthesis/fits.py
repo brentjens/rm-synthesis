@@ -50,8 +50,7 @@ def get_header(fits_name):
     >>> print(get_header('testdata/non-existent.fits'))
     Traceback (most recent call last):
     ...
-    IOError: [Errno 2] No such file or directory: 'testdata/non-existent.fits'
-
+    IOError: File does not exist: 'testdata/non-existent.fits'
     '''
     return pyfits.getheader(fits_name)
 
