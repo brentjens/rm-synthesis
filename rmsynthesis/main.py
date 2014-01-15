@@ -4,7 +4,7 @@ The ``main`` module implements the actual RM-synthesis.
 
 from numpy import exp, newaxis, array, zeros, floor   #pylint: disable=E0611
 from numpy import concatenate, real, imag, frombuffer #pylint: disable=E0611
-from numpy import complex64, array_split #pylint: disable=E0611
+from numpy import complex64, array_split, absolute    #pylint: disable=E0611
 
 
 import multiprocessing as mp
@@ -453,7 +453,7 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     fhp = fits_header.copy()
     fhp.update('POL', 'P')
     fits.write_cube(os.path.join(output_dir, 'p-rmcube-dirty.fits'),
-                    fhp, rmcube.abs(),
+                    fhp, absolute(rmcube),
                     force_overwrite=force_overwrite)
 
     fhq = fits_header.copy()
@@ -542,7 +542,7 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                                               freq_hz, phi)
             print 'Saving data'
 
-            p_out.write(rmcube.abs())
+            p_out.write(absolute(rmcube))
             q_out.write(rmcube.real)
             u_out.write(rmcube.imag)
     finally:

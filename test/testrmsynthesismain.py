@@ -5,6 +5,9 @@ import pyfits
 
 from numpy import arange, complex128, exp, float32, newaxis, ones, pi
 
+rmsynthesis_phases = phases_lambda2_to_phi
+
+
 class RmSynthesisTest(unittest.TestCase):
     def setUp(self):
         self.test_dir       = 'testdata'
@@ -16,8 +19,6 @@ class RmSynthesisTest(unittest.TestCase):
 
         self.freq = arange(100)*10e6 +300e6
         self.phi  = arange(-100.0, 100.0, 4.0)
-
-
 
         for from_file, reference in zip(parse_frequency_file(self.freq_filename),
                                         [314.159265e6, 314.359265e6, 320e6, 330e6,
@@ -42,7 +43,7 @@ class RmSynthesisTest(unittest.TestCase):
         f_phi = zeros((len(self.phi)), dtype = complex64)
         f_phi[15] = 3-4j
 
-        p_f = (f_phi[newaxis, :]*exp(2j*wavelength_squared_m2(self.freq)[:, newaxis]*self.phi[newaxis, :])).sum(axis = 1)
+        p_f = (f_phi[newaxis, :]*exp(2j*wavelength_squared_m2_from_freq_hz(self.freq)[:, newaxis]*self.phi[newaxis, :])).sum(axis = 1)
 
         qcube = zeros((len(self.freq), 5, 7), dtype = complex64)
         ucube = zeros((len(self.freq), 5, 7), dtype = complex64)
@@ -54,15 +55,16 @@ class RmSynthesisTest(unittest.TestCase):
         rmcube_cut[:, 2, 3] *= 0.0
         self.assertTrue((rmcube_cut == 0.0).all())
         self.assertNotAlmostEquals(rmcube[:, 2, 3].mean(), 0.0)
-        self.assertAlmostEquals(rmcube[15, 2, 3],
-                                (3-4j)*exp(2j*self.phi[15]*wavelength_squared_m2(self.freq).mean()),
-                                places = 6)
+        self.assertAlmostEquals(
+            rmcube[15, 2, 3],
+            (3-4j)*exp(2j*self.phi[15]*wavelength_squared_m2_from_freq_hz(self.freq).mean()),
+            places=6)
         self.assertEquals(list(rmcube[:, 2, 3] == rmcube.max()).index(True), 15)
 
 
     def test_compute_rmsf(self):
         rmsf   = compute_rmsf(self.freq, self.phi)
-        wl_m   = wavelength_squared_m2(self.freq)
+        wl_m   = wavelength_squared_m2_from_freq_hz(self.freq)
         wl0_m  = wl_m.mean()
         map(self.assertAlmostEquals,
             rmsf,
