@@ -238,13 +238,13 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
 
     >>> fits_name = 'testdata/partial_output.fits'
     >>> if os.path.exists(fits_name): os.remove(fits_name)
-    >>> 
+    >>>
     >>> hdr, data = get_header_data('testdata/Q_Fthinsource.fits')
     >>> shdu  = streaming_output_hdu(fits_name, hdr, force_overwrite = False)
     >>> for image in data:
     ...     reached_end = shdu.write(image)
     >>> shdu.close()
-    >>> 
+    >>>
     >>> os.path.exists(fits_name)
     True
     >>> os.stat(fits_name).st_size
@@ -342,7 +342,7 @@ def write_cube(fits_name, fits_header, data, force_overwrite = False):
 
     >>> fits_name = 'testdata/write_cube_output.fits'
     >>> if os.path.exists(fits_name): os.remove(fits_name)
-    >>> 
+    >>>
     >>> hdr, data = get_header_data('testdata/Q_Fthinsource.fits')
     >>> write_cube(fits_name, hdr, data)
     >>> hdr2, data2 = get_header_data(fits_name)
