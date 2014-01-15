@@ -6,27 +6,27 @@ from getopt import GetoptError
 import os, sys, time
 
 from rmsynthesis.main import ShapeError, ParseError, compute_rmsf, write_rmsf
-from rmsynthesis.main import file_exists, proper_fits_shapes, parse_frequency_file
+from rmsynthesis.main import file_exists, proper_fits_shapes
 from rmsynthesis.main import wavelength_squared_m2_from_freq_hz
-from rmsynthesis.main import rmsynthesis_dirty_lowmem_main
+from rmsynthesis.main import rmsynthesis_dirty_lowmem_main, parse_frequency_file
 from rmsynthesis.main import RMSYNTHESIS_VERSION
 
-from numpy import arange, array, ceil, sqrt
+from numpy import arange, array, ceil, sqrt #pylint: disable=no-name-in-module
 
 
 def warn(msg):
     print('')
-    print('|------------------------------------------------------------------------------|')
+    print('|' + '-'*78 + '|')
     print('| WARNING: '+msg)
-    print('|------------------------------------------------------------------------------|')
+    print('|' + '-'*78 + '|')
     print('')
     wrong_answer = True
-    answer       = ''
+    answer = ''
     while wrong_answer:
         sys.stdout.write('Do you wish to continue (yes, I do/no)>>> ')
-        answer       = sys.stdin.readline().strip()
+        answer = sys.stdin.readline().strip()
         wrong_answer = answer not in ['yes, I do', 'no']
-        if len(answer)> 15:
+        if len(answer) > 15:
             sys.stdout.write('>>> stop babbling')
             if answer[0:9] == 'yes, I do':
                 sys.stdout.write('! I will continue, though. <<<\n')
@@ -42,7 +42,6 @@ def warn(msg):
 
 
 def print_summary(argv, **kwargs):
-    global RMSYNTHESIS_VERSION
     key_width = 15
     def prkv(key, value):
         print(key.ljust(key_width)+': '+str(value))
@@ -184,11 +183,12 @@ def max_memory_gb(fraction=0.8):
     if os.path.exists('/proc/meminfo'):
         words = [line for line in open('/proc/meminfo').readlines()
                  if 'MemTotal'.lower() in line.lower()][0].split()[1:]
-        mem   = float(words[0])
+        mem = float(words[0])
         if words[1] == 'kB':
             mem *= 1024
         else:
-            raise ValueError('Do not know how to handle memory in %s' % words[1])
+            raise ValueError(
+                'Do not know how to handle memory in %s' % words[1])
         return fraction*mem/(1024**3)
     else:
         return 3.0
@@ -204,7 +204,6 @@ def max_memory_gb(fraction=0.8):
 
 
 def main(argv):
-    global RMSYNTHESIS_VERSION
     if len(argv) == 1:
         return print_help()
     options, arguments = getopt(argv[1:],
@@ -219,19 +218,18 @@ def main(argv):
                                  'force',
                                  'check',
                                  'version'])
-
     # Default values
 
-    output  = '.'
-    low     = None
-    high    = None
-    dphi    = None
+    output = '.'
+    low = None
+    high = None
+    dphi = None
     force_overwrite = False
-    check   = False
+    check = False
     dphi_user_override = False
     qfactor = 1.0
     ufactor = 1.0
-    max_mem_gb = max_memory_gb(fraction = 0.8)
+    max_mem_gb = max_memory_gb(fraction=0.8)
 
     for (option, value) in options:
         if   option in ['-o', '--output']:
@@ -254,15 +252,16 @@ def main(argv):
         elif option in ['-c', '--check']:
             check = True
         elif option in ['-v', '--version']:
-            print('rmsynthesis %s (c) 2005-2013 M.A. Brentjens <brentjens@astron.nl>' %
-                  RMSYNTHESIS_VERSION)
+            print(
+                'rmsynthesis %s (c) 2005-2014 M.A. Brentjens <brentjens@astron.nl>' %
+                RMSYNTHESIS_VERSION)
             exit(0)
 
     if len(arguments) != 3:
         raise GetoptError(
             'error: provide Q and U FITS cubes and a frequency text file')
 
-    files_exist = [file_exists(arg, verbose = True) for arg in arguments]
+    files_exist = [file_exists(arg, verbose=True) for arg in arguments]
     if not all(files_exist):
         print(
             'error: provide Q and U FITS cubes and a frequency text file')
@@ -274,9 +273,9 @@ def main(argv):
     if frequencyname[-4:].lower() == 'fits':
         warn('Frequency file ('+frequencyname+') might be a fits file')
 
-    frequencies  = parse_frequency_file(frequencyname)
-    wl2          = wavelength_squared_m2_from_freq_hz(frequencies)
-    sorted_wl2   = array(sorted(wl2))
+    frequencies = parse_frequency_file(frequencyname)
+    wl2 = wavelength_squared_m2_from_freq_hz(frequencies)
+    sorted_wl2 = array(sorted(wl2))
     smallest_dl2 = min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
     if abs(smallest_dl2) == 0.0:
         print('error: two frames have equal frequency')
@@ -310,13 +309,14 @@ def main(argv):
         warn('Maximum allowed memory is < 500 MB')
 
     rmcube_name = os.path.join(output, '{p-,q-,u-}rmcube-dirty.fits')
-    rmsf_name   = os.path.join(output, 'rmsf.txt')
-    log_name    = os.path.join(output, 'rmsynthesis.log')
+    rmsf_name = os.path.join(output, 'rmsf.txt')
+    log_name = os.path.join(output, 'rmsynthesis.log')
 
     phi = arange(low, high+dphi*0.1, dphi)
 
 
     def summary():
+        #pylint: disable=bad-whitespace
         print_summary(argv,
                       qname         = qname,
                       uname         = uname,
@@ -354,7 +354,7 @@ def main(argv):
     if not check:
         if not file_exists(output):
             os.mkdir(output)
-        saveout    = sys.stdout
+        saveout = sys.stdout
         sys.stdout = open(log_name, 'w')
         summary()
         sys.stdout.close()
@@ -364,7 +364,7 @@ def main(argv):
     # Finally, do the work...
 
     if not check:
-        rmsynthesis_dirty_lowmem_main(qname,   uname,
+        rmsynthesis_dirty_lowmem_main(qname, uname,
                                       qfactor, ufactor,
                                       output, frequencies,
                                       phi, force_overwrite,
@@ -390,7 +390,7 @@ if __name__ == "__main__":
         print(sys.exc_info()[1])
         print('The input or output cubes are too large to handle at the moment. They do ')
         print('not fit in memory together with the intermediate results. Please make the')
-        print('cubes smaller or kindly ask the author for an upgrade.')
+        print('cubes smaller, buy more RAM, or kindly ask the author for an upgrade.')
         print('use "'+sys.argv[0]+'" for help.')
         exit(-1)
     except (KeyboardInterrupt, ):

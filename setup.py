@@ -1,7 +1,7 @@
 from distutils.core import setup
-
+from rmsynthesis.main import __version__
 setup(name='rmsynthesis',
-      version='1.0-rc4',
+      version=__version__,
       description='Simple Faraday rotation measure synthesis tool',
       author='Michiel Brentjens',
       author_email='brentjens@astron.nl',

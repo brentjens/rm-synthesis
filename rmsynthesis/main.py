@@ -2,9 +2,11 @@ r'''
 The ``main`` module implements the actual RM-synthesis.
 '''
 
+from numpy import exp, newaxis, array, zeros, floor   #pylint: disable=E0611
+from numpy import concatenate, real, imag, frombuffer #pylint: disable=E0611
+from numpy import complex64, array_split #pylint: disable=E0611
 
-from numpy import array, complex64, exp, zeros, newaxis, real, imag, floor
-from numpy import array_split, concatenate, frombuffer, add, multiply
+
 import multiprocessing as mp
 import gc, os, sys, ctypes
 
@@ -12,13 +14,14 @@ try:
     from itertools import izip
 except ImportError:
     def izip(*args):
+        'itertools.izip replacement for older python versions.'
         return zip(*args)
     izip.__doc__ = zip.__doc__
 
 import rmsynthesis.fits as fits
 
-RMSYNTHESIS_VERSION = '1.0-rc3'
-__version__ = '1.0-rc3'
+__version__ = '1.0-rc4'
+RMSYNTHESIS_VERSION = __version__
 
 
 class ParseError(RuntimeError):
@@ -47,11 +50,11 @@ def file_exists(filename, verbose=False):
     except (OSError,):
         err = sys.exc_info()[1]
         if verbose:
-            print('error: '+str(err))
+            print('error: '+str(err)) #pylint: disable=superfluous-parens
         return False
 
 
-def almost_equal(x, y, epsilon = 1e-9):
+def almost_equal(number_x, number_y, epsilon=1e-9):
     r'''
     Returns True if
 
@@ -64,10 +67,10 @@ def almost_equal(x, y, epsilon = 1e-9):
 
     **Parameters**
 
-    x : float or complex
+    number_x : float or complex
         One of the numbers to compare.
 
-    y : float or complex
+    number_y : float or complex
         The other number to compare.
 
     epsilon : float
@@ -75,7 +78,7 @@ def almost_equal(x, y, epsilon = 1e-9):
 
     **Returns**
 
-    A boolean indicating if ``x`` and ``y`` are almost equal.
+    A boolean indicating if ``number_x`` and ``number_y`` are almost equal.
 
     **Examples**
 
@@ -91,16 +94,16 @@ def almost_equal(x, y, epsilon = 1e-9):
     True
     '''
 
-    if x == 0.0:
-        return abs(y) < epsilon
-    if y == 0.0:
-        return abs(x) < epsilon
-    return abs(x - y)/max(abs(x), abs(y)) < epsilon
+    if number_x == 0.0:
+        return abs(number_y) < epsilon
+    if number_y == 0.0:
+        return abs(number_x) < epsilon
+    return abs(number_x - number_y)/max(abs(number_x), abs(number_y)) < epsilon
 
 
 
 
-def wavelength_squared_m2_from_freq_hz(freq_hz):
+def wavelength_squared_m2_from_freq_hz(freq_hz): #pylint: disable=invalid-name
     r'''
     Convert *freq_hz* (in Hz) to wavelength squared (in
     m^2).
@@ -159,9 +162,11 @@ def phases_lambda2_to_phi(wavelength_squared_m2, phi_rad_m2):
     True
     >>> almost_equal(phases_lambda2_to_phi(pi/2, 0.5), -1.j)
     True
-    >>> map(almost_equal, phases_lambda2_to_phi(array([pi, 0.5*pi]), 0.5), [-1., -1.j])
+    >>> map(almost_equal,
+    ...     phases_lambda2_to_phi(array([pi, 0.5*pi]), 0.5), [-1., -1.j])
     [True, True]
-    >>> map(almost_equal, phases_lambda2_to_phi(pi, array([0.5, -0.25])), [-1., +1.j])
+    >>> map(almost_equal,
+    ... phases_lambda2_to_phi(pi, array([0.5, -0.25])), [-1., +1.j])
     [True, True]
 
     '''
@@ -208,8 +213,8 @@ def parse_frequency_file(filename):
     '''
     try:
         return array([float(x.split('#')[0].strip())
-                      for x in open(filename).readlines()
-                      if x.split('#')[0].strip() != ''])
+                         for x in open(filename).readlines()
+                         if x.split('#')[0].strip() != ''])
     except (ValueError,):        # Use this construction to be backwards
         err = sys.exc_info()[1]  # compatible with Python 2.5.  Proper
                                  # Python 2.6/2.7/3.0 is
@@ -230,9 +235,9 @@ def proper_fits_shapes(qname, uname, frequencyname):
     Returns True if all is well, raises ShapeError otherwise.
     """
     frequencies = parse_frequency_file(frequencyname)
-    q_h         = fits.get_header(qname)
-    u_h         = fits.get_header(uname)
-    errors      = []
+    q_h = fits.get_header(qname)
+    u_h = fits.get_header(uname)
+    errors = []
     for name, hdr in [(qname, q_h), (uname, u_h)]:
         if hdr['NAXIS'] != 3:
             errors.append('error: number of axes in %s  is  %d, not 3' %
@@ -263,13 +268,13 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     before with the help of the proper_fits_shapes() function. The
     polarization vectors are derotated to the average lambda^2.
     """
-    wl2       = wavelength_squared_m2_from_freq_hz(frequencies)
-    rmcube    = zeros((len(phi_array), qcube.shape[1], qcube.shape[2]),
-                      dtype=complex64)
-    wl2_0     = wl2.mean()
+    wl2 = wavelength_squared_m2_from_freq_hz(frequencies)
+    rmcube = zeros((len(phi_array), qcube.shape[1], qcube.shape[2]),
+                   dtype=complex64)
+    wl2_0 = wl2.mean()
     p_complex = qcube+1j*ucube
 
-    num   = len(phi_array)
+    num = len(phi_array)
     nfreq = len(frequencies)
     for i, phi in enumerate(phi_array):
         print('processing frame %4d/%d, phi = %7.1f' % (i+1, num, phi))
@@ -278,9 +283,6 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     return rmcube
 
 
-
-def mul(matrix, scalar):
-    return matrix*scalar
 
 def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
                              frequencies, phi_array):
@@ -292,13 +294,13 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
     before with the help of the proper_fits_shapes() function. The
     polarization vectors are derotated to the average lambda^2.
     """
-    wl2       = wavelength_squared_m2_from_freq_hz(frequencies)
-    qheader   = fits.get_header(qname)
-    rmcube    = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']),
-                      dtype = complex64)
-    wl2_0     = wl2.mean()
+    wl2 = wavelength_squared_m2_from_freq_hz(frequencies)
+    qheader = fits.get_header(qname)
+    rmcube = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']),
+                   dtype=complex64)
+    wl2_0 = wl2.mean()
 
-    nfreq    = len(frequencies)
+    nfreq = len(frequencies)
     q_frames = fits.image_frames(qname)
     u_frames = fits.image_frames(uname)
     frame_id = 0
@@ -307,7 +309,7 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
         print('processing frame '+str(frame_id+1)+'/'+str(nfreq))
         p_complex = q_frame*q_factor + 1.0j*u_frame*u_factor
         wl2_frame = wl2_norm[frame_id]
-        phases    = phases_lambda2_to_phi(wl2_frame, phi_array)
+        phases = phases_lambda2_to_phi(wl2_frame, phi_array)
         for frame, phase in enumerate(phases):
             rmcube[frame, :, :] += p_complex*phase
         frame_id += 1
@@ -322,8 +324,9 @@ def rmsynthesis_worker(queue, shared_arr, frame_shape, phi_array):
     r'''
     '''
     rmcube = zeros((len(phi_array),)+frame_shape,
-                   dtype = complex64)
-    p_complex = frombuffer(shared_arr.get_obj(), dtype=complex64).reshape(frame_shape)
+                      dtype=complex64)
+    p_complex = frombuffer(shared_arr.get_obj(),
+                           dtype=complex64).reshape(frame_shape)
 
     while True:
         item = queue.get()
@@ -332,7 +335,7 @@ def rmsynthesis_worker(queue, shared_arr, frame_shape, phi_array):
             break
         else:
             wl2_frame = item
-            phases    = phases_lambda2_to_phi(wl2_frame, phi_array)
+            phases = phases_lambda2_to_phi(wl2_frame, phi_array)
             for frame, phase in enumerate(phases):
                 rmcube[frame, :, :] += p_complex*phase
             gc.collect()
@@ -351,44 +354,50 @@ def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor,
 
     Uses the multiprocessing module to speed up the calculations.
     """
-    num_workers  = mp.cpu_count()-1
+    num_workers = mp.cpu_count()-1
 
-    wl2       = wavelength_squared_m2_from_freq_hz(frequencies)
-    qheader   = fits.get_header(qname)
-    wl2_0     = wl2.mean()
+    wl2 = wavelength_squared_m2_from_freq_hz(frequencies)
+    qheader = fits.get_header(qname)
+    wl2_0 = wl2.mean()
 
-    nfreq    = len(frequencies)
+    nfreq = len(frequencies)
     q_frames = fits.image_frames(qname)
     u_frames = fits.image_frames(uname)
     frame_id = 0
     wl2_norm = wl2 - wl2_0
 
-    phi_arrays  = array_split(phi_array, num_workers)
+    phi_arrays = array_split(phi_array, num_workers)
     frame_shape = (qheader['NAXIS2'], qheader['NAXIS1'])
-    mp_shared_p_complex = mp.Array(ctypes.c_float, frame_shape[0]*frame_shape[1]*2)
-    p_complex = frombuffer(mp_shared_p_complex.get_obj(), dtype=complex64).reshape(frame_shape)
+    mp_shared_p_complex = mp.Array(ctypes.c_float,
+                                   frame_shape[0]*frame_shape[1]*2)
+    p_complex = frombuffer(mp_shared_p_complex.get_obj(),
+                           dtype=complex64).reshape(frame_shape)
 
-    queues      = [mp.JoinableQueue() for i in range(num_workers)]
-    workers     = [mp.Process(target=rmsynthesis_worker,
-                              args=(queue, mp_shared_p_complex, frame_shape, phi))
+    queues = [mp.JoinableQueue() for _ in range(num_workers)]
+    workers = [mp.Process(target=rmsynthesis_worker,
+                          args=(queue, mp_shared_p_complex,
+                                frame_shape, phi))
                    for queue, phi in zip(queues, phi_arrays)]
     for worker in workers:
-        worker.daemon=True
+        worker.daemon = True
         worker.start()
 
     for q_frame, u_frame in izip(q_frames, u_frames):
         print('processing frame '+str(frame_id+1)+'/'+str(nfreq))
-        p_complex[:,:] = q_frame*q_factor + 1.0j*u_frame*u_factor
+        p_complex[:, :] = q_frame*q_factor + 1.0j*u_frame*u_factor
         wl2_frame = wl2_norm[frame_id]
 
-        [queue.put(wl2_frame) for queue in queues]
-        [queue.join() for queue in queues]
+        for queue in queues:
+            queue.put(wl2_frame)
+        for queue in queues:
+            queue.join()
         frame_id += 1
         gc.collect()
-    [queue.put(None) for queue in queues]
+    for queue in queues:
+        queue.put(None)
     print 'Collecting partial results'
     partial_rmcubes = [queue.get() for queue in queues]
-    rmcube   = concatenate(partial_rmcubes)/nfreq
+    rmcube = concatenate(partial_rmcubes)/nfreq
     for worker in workers:
         worker.join()
     gc.collect()
@@ -401,10 +410,10 @@ def compute_rmsf(frequencies, phi_array):
     Compute the Rotation Measure Spread Function, derotating to the
     average lambda^2.
     """
-    wl2   = wavelength_squared_m2_from_freq_hz(frequencies)
+    wl2 = wavelength_squared_m2_from_freq_hz(frequencies)
     wl2_0 = wl2.mean()
     return array([phases_lambda2_to_phi((wl2 - wl2_0), phi).mean()
-                  for phi in phi_array])
+                     for phi in phi_array])
 
 
 def add_phi_to_fits_header(fits_header, phi_array):
@@ -428,7 +437,7 @@ def add_phi_to_fits_header(fits_header, phi_array):
 
 
 def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
-    """
+    r'''
     Writes a complex valued, 3D  *rmcube* to *output_dir* as three
     separate FITS cubes:
 
@@ -440,11 +449,11 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     is not writable, or if the output file(s) already exist and
     *force_overwrite* is False. If *force_overwrite* is True, the
     output files will be overwritten.
-    """
+    '''
     fhp = fits_header.copy()
     fhp.update('POL', 'P')
     fits.write_cube(os.path.join(output_dir, 'p-rmcube-dirty.fits'),
-                    fhp, abs(rmcube),
+                    fhp, rmcube.abs(),
                     force_overwrite=force_overwrite)
 
     fhq = fits_header.copy()
@@ -461,6 +470,8 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
 
 
 def write_rmsf(phi, rmsf, output_dir):
+    r'''
+    '''
     rmsf_out = open(os.path.join(output_dir, 'rmsf.txt'), 'w')
     for phi, f_phi in zip(phi, rmsf):
         rmsf_out.write('%10.4f  %10.4f %10.4f\n' %
@@ -496,25 +507,25 @@ def output_pqu_headers(fits_header):
 
 def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                                   output_dir, freq_hz, phi_rad_m2,
-                                  force_overwrite, max_mem_gb = 2.0):
+                                  force_overwrite, max_mem_gb=2.0):
     r'''
     '''
-    q_header         = fits.get_header(q_name)
+    q_header = fits.get_header(q_name)
     pixels_per_frame = q_header['NAXIS1']*q_header['NAXIS2']
 
-    max_mem_bytes          = max_mem_gb*1024**3
+    max_mem_bytes = max_mem_gb*1024**3
     bytes_per_output_pixel = 4
-    max_output_pixels      = max_mem_bytes/bytes_per_output_pixel
+    max_output_pixels = max_mem_bytes/bytes_per_output_pixel
     # 7 = (re, im) + p_out + q_out + u_out
-    block_length           = int(floor(max_output_pixels/pixels_per_frame/5.0))
-    num_blocks             = len(phi_rad_m2)/block_length
+    block_length = int(floor(max_output_pixels/pixels_per_frame/5.0))
+    num_blocks = len(phi_rad_m2)/block_length
     if len(phi_rad_m2) % block_length > 0:
         num_blocks += 1
 
 
     output_header = add_phi_to_fits_header(q_header.copy(), phi_rad_m2)
     p_out_name, q_out_name, u_out_name = output_pqu_fits_names(output_dir)
-    p_out_hdr , q_out_hdr , u_out_hdr  = output_pqu_headers(output_header)
+    p_out_hdr, q_out_hdr, u_out_hdr = output_pqu_headers(output_header)
     p_out, q_out, u_out = [fits.streaming_output_hdu(fits_name,
                                                      header,
                                                      force_overwrite)
@@ -526,14 +537,14 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
             phi = phi_rad_m2[block*block_length:(block+1)*block_length]
             print 'Processing block %d / %d' % (block + 1, num_blocks)
             print 'Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1])
-            rmcube = rmsynthesis_dirty_lowmem_mp(q_name, u_name,
+            rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
                                               q_factor, u_factor,
                                               freq_hz, phi)
             print 'Saving data'
 
-            p_out.write(abs(rmcube))
-            q_out.write(real(rmcube))
-            u_out.write(imag(rmcube))
+            p_out.write(rmcube.abs())
+            q_out.write(rmcube.real)
+            u_out.write(rmcube.imag)
     finally:
         p_out.close()
         q_out.close()
