@@ -14,7 +14,7 @@ except ImportError:
     def izip(*args):
         return zip(*args)
     izip.__doc__ = zip.__doc__
-    
+
 import rmsynthesis.fits as fits
 
 RMSYNTHESIS_VERSION = '1.0-rc3'
@@ -61,7 +61,7 @@ def almost_equal(x, y, epsilon = 1e-9):
 
     If either of the numbers is exactly zero, it returns True if the
     other number's absolute value is below :math:``\epsilon``.
- 
+
     **Parameters**
 
     x : float or complex
@@ -138,7 +138,7 @@ def phases_lambda2_to_phi(wavelength_squared_m2, phi_rad_m2):
     r'''
     Computes the phase factor
 
-    .. math::    
+    .. math::
       \mathrm{e}^{-2\mathrm{i}\phi\lambda^2},
 
     necessary in the transform from wavelength squared space to
@@ -173,7 +173,7 @@ def phases_phi_to_lambda2(wavelength_squared_m2, phi_rad_m2):
     r'''
     Computes the phase factor
 
-    .. math::    
+    .. math::
       \mathrm{e}^{+2\mathrm{i}\phi\lambda^2},
 
     necessary in the transform from Faraday depth to wavelength
@@ -189,7 +189,7 @@ def phases_phi_to_lambda2(wavelength_squared_m2, phi_rad_m2):
 
     **Examples**
 
-    >>>  
+    >>>
     '''
     return exp(+2j*phi_rad_m2*wavelength_squared_m2)
 
@@ -218,7 +218,7 @@ def parse_frequency_file(filename):
         raise ParseError('while parsing '+filename+': '+str(err))
 
 
-    
+
 
 def proper_fits_shapes(qname, uname, frequencyname):
     """
@@ -240,7 +240,7 @@ def proper_fits_shapes(qname, uname, frequencyname):
 
     for axis in ['NAXIS1', 'NAXIS2', 'NAXIS3']:
         if q_h[axis] != u_h[axis]:
-            errors.append('error: %s in %s (%d) not equal to %s in %s (%d)' % 
+            errors.append('error: %s in %s (%d) not equal to %s in %s (%d)' %
                           (axis, qname, q_h[axis], axis, uname, u_h[axis]))
 
     if q_h['NAXIS3'] != len(frequencies):
@@ -250,7 +250,7 @@ def proper_fits_shapes(qname, uname, frequencyname):
     if len(errors) > 0:
         raise ShapeError('\n'.join(errors))
     return True
-        
+
 
 
 
@@ -268,7 +268,7 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
                       dtype=complex64)
     wl2_0     = wl2.mean()
     p_complex = qcube+1j*ucube
-    
+
     num   = len(phi_array)
     nfreq = len(frequencies)
     for i, phi in enumerate(phi_array):
@@ -282,7 +282,7 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
 def mul(matrix, scalar):
     return matrix*scalar
 
-def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor, 
+def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
                              frequencies, phi_array):
     """
     Perform an RM synthesis on Q and U image cubes with given
@@ -297,12 +297,12 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
     rmcube    = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']),
                       dtype = complex64)
     wl2_0     = wl2.mean()
-    
+
     nfreq    = len(frequencies)
     q_frames = fits.image_frames(qname)
     u_frames = fits.image_frames(uname)
     frame_id = 0
-    wl2_norm = wl2 - wl2_0 
+    wl2_norm = wl2 - wl2_0
     for q_frame, u_frame in izip(q_frames, u_frames):
         print('processing frame '+str(frame_id+1)+'/'+str(nfreq))
         p_complex = q_frame*q_factor + 1.0j*u_frame*u_factor
@@ -312,7 +312,7 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
             rmcube[frame, :, :] += p_complex*phase
         frame_id += 1
         gc.collect()
-        
+
     return rmcube/nfreq
 
 
@@ -339,7 +339,7 @@ def rmsynthesis_worker(queue, shared_arr, frame_shape, phi_array):
             queue.task_done()
 
 
-def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor, 
+def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor,
                                 frequencies, phi_array):
     """
     Perform an RM synthesis on Q and U image cubes with given
@@ -352,16 +352,16 @@ def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor,
     Uses the multiprocessing module to speed up the calculations.
     """
     num_workers  = mp.cpu_count()-1
-    
+
     wl2       = wavelength_squared_m2_from_freq_hz(frequencies)
     qheader   = fits.get_header(qname)
     wl2_0     = wl2.mean()
-    
+
     nfreq    = len(frequencies)
     q_frames = fits.image_frames(qname)
     u_frames = fits.image_frames(uname)
     frame_id = 0
-    wl2_norm = wl2 - wl2_0 
+    wl2_norm = wl2 - wl2_0
 
     phi_arrays  = array_split(phi_array, num_workers)
     frame_shape = (qheader['NAXIS2'], qheader['NAXIS1'])
@@ -380,7 +380,7 @@ def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor,
         print('processing frame '+str(frame_id+1)+'/'+str(nfreq))
         p_complex[:,:] = q_frame*q_factor + 1.0j*u_frame*u_factor
         wl2_frame = wl2_norm[frame_id]
-        
+
         [queue.put(wl2_frame) for queue in queues]
         [queue.join() for queue in queues]
         frame_id += 1
@@ -431,7 +431,7 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     """
     Writes a complex valued, 3D  *rmcube* to *output_dir* as three
     separate FITS cubes:
-    
+
     - *output_dir*/p-rmcube-dirty.fits : Absolute value.
     - *output_dir*/q-rmcube-dirty.fits : Real part.
     - *output_dir*/u-rmcube-dirty.fits : Imaginary part.
@@ -446,13 +446,13 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     fits.write_cube(os.path.join(output_dir, 'p-rmcube-dirty.fits'),
                     fhp, abs(rmcube),
                     force_overwrite=force_overwrite)
-    
+
     fhq = fits_header.copy()
     fhq.update('POL', 'Q')
     fits.write_cube(os.path.join(output_dir, 'q-rmcube-dirty.fits'),
                     fhq, rmcube.real,
                     force_overwrite=force_overwrite)
-    
+
     fhu = fits_header.copy()
     fhu.update('POL', 'U')
     fits.write_cube(os.path.join(output_dir, 'u-rmcube-dirty.fits'),
@@ -481,15 +481,15 @@ def output_pqu_headers(fits_header):
     p_hdr = fits_header.copy()
     p_hdr.update('POL', 'P')
     p_hdr.update('BITPIX', -32)
-    
+
     q_hdr = fits_header.copy()
     q_hdr.update('POL', 'Q')
     q_hdr.update('BITPIX', -32)
-    
+
     u_hdr = fits_header.copy()
     u_hdr.update('POL', 'U')
     u_hdr.update('BITPIX', -32)
-    
+
     return  p_hdr, q_hdr, u_hdr
 
 
@@ -530,7 +530,7 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                                               q_factor, u_factor,
                                               freq_hz, phi)
             print 'Saving data'
-            
+
             p_out.write(abs(rmcube))
             q_out.write(real(rmcube))
             u_out.write(imag(rmcube))

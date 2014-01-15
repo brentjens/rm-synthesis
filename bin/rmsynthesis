@@ -46,7 +46,7 @@ def print_summary(argv, **kwargs):
     key_width = 15
     def prkv(key, value):
         print(key.ljust(key_width)+': '+str(value))
-    
+
     print('')
     print('RM synthesis %s summary' % RMSYNTHESIS_VERSION)
     print('------------------------')
@@ -86,17 +86,17 @@ or
   -o/--output <directory>    Output directory (Default: .)
 
   -l/--low <phi>             Lowest Faraday depth in output cube.
-                             Default value is 
+                             Default value is
                              -sqrt(3)/delta (lambda^2),
                              where delta (lambda^2) is the smallest
                              one as computed from the frequency list.
 
   -h/--high <phi>            Highest Faraday depth in output cube.
-                             Default value is 
+                             Default value is
                              +sqrt(3)/delta (lambda^2),
                              where delta (lambda^2) is the smallest
                              one computed from the frequency list.
-  
+
   -d/--dphi <delta phi>      Faraday depth increment between frames
                              from the RM cube. Default value is
                              sqrt(3)/Delta (lambda^2), where Delta
@@ -152,7 +152,7 @@ Output
 ------
 
 The output files are written in the current working directory, unless
-otherwise specified with the -o option. 
+otherwise specified with the -o option.
 
 - p-rmcube-dirty.fits FITS cube with axis RA (AXIS1), Dec (AXIS2),
                       Faraday depth (AXIS3). Total linear polarization.
@@ -192,15 +192,15 @@ def max_memory_gb(fraction=0.8):
         return fraction*mem/(1024**3)
     else:
         return 3.0
-        
 
-    
+
+
 
 
 
 #
-#  MAIN routine 
-# 
+#  MAIN routine
+#
 
 
 def main(argv):
@@ -219,9 +219,9 @@ def main(argv):
                                  'force',
                                  'check',
                                  'version'])
-    
+
     # Default values
-    
+
     output  = '.'
     low     = None
     high    = None
@@ -232,7 +232,7 @@ def main(argv):
     qfactor = 1.0
     ufactor = 1.0
     max_mem_gb = max_memory_gb(fraction = 0.8)
-    
+
     for (option, value) in options:
         if   option in ['-o', '--output']:
             output = value
@@ -267,13 +267,13 @@ def main(argv):
         print(
             'error: provide Q and U FITS cubes and a frequency text file')
         return -1
-    
+
     qname, uname, frequencyname = arguments
     if qname == uname:
         warn('Q name ('+qname+') and U name ('+uname+' are the same')
     if frequencyname[-4:].lower() == 'fits':
         warn('Frequency file ('+frequencyname+') might be a fits file')
-    
+
     frequencies  = parse_frequency_file(frequencyname)
     wl2          = wavelength_squared_m2_from_freq_hz(frequencies)
     sorted_wl2   = array(sorted(wl2))
@@ -284,13 +284,13 @@ def main(argv):
 
     if low is None:
         low = -sqrt(3)/smallest_dl2
-        
+
     if high is None:
         high = +sqrt(3)/smallest_dl2
-        
+
     if dphi is None:
         dphi = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
-        
+
     # Normalize dphi so that there is an integer number
     # of frames between low and high (inclusive)
     if not dphi_user_override:
@@ -350,7 +350,7 @@ def main(argv):
         return -1
 
     # Write log file
-    
+
     if not check:
         if not file_exists(output):
             os.mkdir(output)
@@ -362,7 +362,7 @@ def main(argv):
 
 
     # Finally, do the work...
-    
+
     if not check:
         rmsynthesis_dirty_lowmem_main(qname,   uname,
                                       qfactor, ufactor,

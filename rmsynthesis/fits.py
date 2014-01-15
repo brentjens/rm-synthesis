@@ -67,7 +67,7 @@ def get_header_data(fits_name):
 
     **Returns**
 
-    A (pyfits.Header, numpy.ndarray) tuple. 
+    A (pyfits.Header, numpy.ndarray) tuple.
 
     **Raises**
 
@@ -104,11 +104,11 @@ def get_header_data(fits_name):
     >>> str(data.dtype)
     '>f4'
 
-    Operating on them in any way, converts the output to 'float32':    
+    Operating on them in any way, converts the output to 'float32':
     >>> str((data*1).dtype)
     'float32'
 
-    Of course, opening a non-existent file results in an ``OSError``...    
+    Of course, opening a non-existent file results in an ``OSError``...
     >>> get_header_data('testdata/non-existent.fits')
     Traceback (most recent call last):
     ...
@@ -148,7 +148,7 @@ def get_data_offset_length(fits_name):
     info    = hdulist.fileinfo(0)
     hdulist.close()
     return info['datLoc'], info['datSpan']
-    
+
 
 
 def image_frames(fits_name):
@@ -182,13 +182,13 @@ def image_frames(fits_name):
     (100, 100): -87.07
     (100, 100): -0.70
     (100, 100): 76.28
-    
+
     '''
     header = get_header(fits_name)
     dtype  = pyfits.hdu.PrimaryHDU.NumCode[header['BITPIX']]
     shape  = (header['NAXIS2'], header['NAXIS1'])
     frame_size = product(shape)*abs(header['BITPIX']/8)
-    
+
     data_start, data_length = get_data_offset_length(fits_name)
     file_stream = open(fits_name, mode='rb')
     file_stream.seek(data_start)
@@ -203,7 +203,7 @@ def image_frames(fits_name):
                 yield frame
     finally:
         file_stream.close()
-    
+
 
 
 
@@ -281,7 +281,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
     IOError: testdata/partial_output.fits already exists and is not overwritten.
 
     Let's try that again:
-    
+
     >>> import time
     >>> current_time = time.time()
     >>> shdu  = streaming_output_hdu(fits_name, hdr, force_overwrite = True)
@@ -289,7 +289,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
     >>> for image in data:
     ...     reached_end = shdu.write(image)
     >>> shdu.close()
-    >>> 
+    >>>
     >>> os.path.exists(fits_name)
     True
     >>> os.stat(fits_name).st_size
@@ -308,8 +308,8 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
             raise IOError('%s already exists and is not overwritten.' %
                           fits_name)
     return pyfits.core.StreamingHDU(fits_name, fits_header)
-    
-    
+
+
 def write_cube(fits_name, fits_header, data, force_overwrite = False):
     r'''
     Write an image cube to a FITS file containing only one HDU.
@@ -326,7 +326,7 @@ def write_cube(fits_name, fits_header, data, force_overwrite = False):
         The (hyper)cube to write to the FITS file.
 
     force_overwrite : bool
-    
+
         If True, the output file will be overwritten. Otherwise, an
         IOError is raised if the output file already exists.
 
@@ -377,7 +377,7 @@ def write_cube(fits_name, fits_header, data, force_overwrite = False):
 
     >>> import time
     >>> current_time = time.time()
-    >>> write_cube(fits_name, hdr, data, force_overwrite = True)    
+    >>> write_cube(fits_name, hdr, data, force_overwrite = True)
     Overwriting existing file 'testdata/write_cube_output.fits'.
     >>> os.path.exists(fits_name)
     True
@@ -386,7 +386,7 @@ def write_cube(fits_name, fits_header, data, force_overwrite = False):
     >>> os.stat(fits_name).st_ctime > current_time
     True
     >>> os.remove(fits_name)
-    
+
     '''
     hdulist    = pyfits.HDUList()
     hdu        = pyfits.PrimaryHDU()
