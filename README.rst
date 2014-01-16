@@ -1,13 +1,14 @@
 RM-Synthesis Overview
 =====================
 
-(c) Michiel Brentjens <brentjens@astron.nl>
+Copyright (2005--2014) Michiel Brentjens <brentjens@astron.nl>
 
 This Python script can perform a basic (dirty) RM-synthesis, given a
 FITS cube with Stokes Q images, a FITS cube with Stokes U images, and
 a text file containing the frequencies of these images. RM synthesis
-is described in M.A. Brentjens & A.G. de Bruyn, A&A (2005).
--
+is described in M.A. Brentjens & A.G. de Bruyn, A&A (2005). The script
+runs under Python 2.7 as well as Python 3.
+
 
 Installation
 ------------
@@ -80,9 +81,9 @@ The third required input is the list of frequencies. This must be a
 text file with one frequency per line. The frequency must be in Hz and
 can be either an integer or a floating point number. A (tiny) example:
 
-1.420e9
-1680000000
-4800000000
+  1.420e9
+  1680000000
+  4800000000
 
 
 Output
