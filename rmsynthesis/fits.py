@@ -3,7 +3,7 @@ A collection of small utilities to interface with ``pyfits``.
 '''
 
 from numpy import fromfile, product #pylint: disable=no-name-in-module
-import pyfits, os, sys
+import pyfits, os, sys, logging
 
 
 def get_header(fits_name):
@@ -249,7 +249,6 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
     >>> import time
     >>> current_time = time.time()
     >>> shdu  = streaming_output_hdu(fits_name, hdr, force_overwrite = True)
-    Overwriting existing file 'testdata/partial_output.fits'.
     >>> for image in data:
     ...     reached_end = shdu.write(image)
     >>> shdu.close()
@@ -266,7 +265,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
 
     if os.path.exists(fits_name):
         if force_overwrite:
-            print('Overwriting existing file %r.' % fits_name)
+            logging.warn('Overwriting existing file %r.' % fits_name)
             os.remove(fits_name)
         else:
             raise IOError('%s already exists and is not overwritten.' %

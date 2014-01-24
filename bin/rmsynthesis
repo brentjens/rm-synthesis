@@ -12,6 +12,62 @@ from rmsynthesis.main import rmsynthesis_dirty_lowmem_main, parse_frequency_file
 from rmsynthesis.main import RMSYNTHESIS_VERSION
 
 from numpy import arange, array, ceil, sqrt #pylint: disable=no-name-in-module
+import logging
+
+
+def initialize_logging(log_dir, log_level='INFO'):
+    r'''
+    Initialize the Python logging system. The log file will be written
+    to ``log_dir/pps-tuning-<STATION_NAME>.log``.
+
+    **Parameters**
+
+    log_dir : string
+        Directory where the log file must be written.
+ 
+    log_level : string
+        Minimum log level of lines to write into the
+        log file. Possible values are 'DEBUG', 'INFO', 'WARNING', and
+        'ERROR'.
+
+    **Returns**
+
+    A string containing the log file name.
+
+    **Examples**
+
+    >>> initialize_logging('testdata/', log_level = 'INFO')
+    'testdata/rmsyntesis.log'
+    '''
+    log_levels   = {'DEBUG'  : logging.DEBUG,
+                    'INFO'   : logging.INFO,
+                    'WARNING': logging.WARNING,
+                    'ERROR'  : logging.ERROR}
+    level = log_levels[log_level]
+    
+    log_format     = ('rmsynthesis:' +
+                      ' %(asctime)s %(levelname)8s - %(message)s')
+    log_file_name  = os.path.join(log_dir, 'rmsynthesis.log')
+
+    logger       = logging.root
+    logger.setLevel(level)
+    formatter    = logging.Formatter(log_format)
+
+    file_handler = logging.FileHandler(log_file_name)
+    logger.addHandler(file_handler)
+
+    if len(logger.handlers) == 1:
+        stream_handler = logging.StreamHandler()
+        logger.addHandler(stream_handler)
+        
+    for handler in logger.handlers:
+        handler.setFormatter(formatter)
+        handler.setLevel(level)
+
+    return log_file_name
+
+
+
 
 
 def warn(msg):
@@ -41,23 +97,23 @@ def warn(msg):
         exit(-1)
 
 
-def print_summary(argv, **kwargs):
+def log_summary(argv, **kwargs):
     key_width = 15
     def prkv(key, value):
-        print(key.ljust(key_width)+': '+str(value))
-
-    print('')
-    print('RM synthesis %s summary' % RMSYNTHESIS_VERSION)
-    print('------------------------')
-    print('')
-    print('Command'.ljust(key_width)+': '+' '.join(argv))
+        logging.info(key.ljust(key_width)+': '+str(value))
+    
+    logging.info('')
+    logging.info('RM synthesis %s summary' % RMSYNTHESIS_VERSION)
+    logging.info('------------------------')
+    logging.info('')
+    logging.info('Command'.ljust(key_width)+': '+' '.join(argv))
     if sys.version_info.major == 2 and sys.version_info.minor >= 3:
-        print('Working dir'.ljust(key_width)+': '+os.getcwdu())
+        logging.info('Working dir'.ljust(key_width)+': '+os.getcwdu())
     else:
-        print('Working dir'.ljust(key_width)+': '+os.getcwd())
+        logging.info('Working dir'.ljust(key_width)+': '+os.getcwd())
 
-    print('Max mem'.ljust(key_width)+': '+'%.1f GB' % kwargs['max_mem_gb'])
-    print('')
+    logging.info('Max mem'.ljust(key_width)+': '+'%.1f GB' % kwargs['max_mem_gb'])
+    logging.info('')
 
     prkv('Q cube', kwargs['qname'])
     prkv('U cube', kwargs['uname'])
@@ -65,15 +121,15 @@ def print_summary(argv, **kwargs):
     prkv('Output dir', kwargs['output_dir'])
     prkv('Force overwrite', kwargs['force_overwrite'])
     prkv('Check only', kwargs['check'])
-    print('')
+    logging.info('')
     prkv('Low phi', kwargs['low_phi'])
     prkv('High phi', kwargs['high_phi'])
     prkv('Delta phi', kwargs['dphi'])
-    print('')
+    logging.info('')
     prkv('RM cube', kwargs['rmcube_name'])
     prkv('RMSF', kwargs['rmsf_name'])
     prkv('Log file', kwargs['log_name'])
-    print('')
+    logging.info('')
 
 
 def print_help():
@@ -316,30 +372,14 @@ def main(argv):
     rmsf_name = os.path.join(output, 'rmsf.txt')
     log_name = os.path.join(output, 'rmsynthesis.log')
 
-    phi = arange(low, high+dphi*0.1, dphi)
-
-
-    def summary():
-        #pylint: disable=bad-whitespace
-        print_summary(argv,
-                      qname         = qname,
-                      uname         = uname,
-                      frequencyname = frequencyname,
-                      output_dir    = output,
-                      low_phi       = low,
-                      high_phi      = high,
-                      dphi          = dphi,
-                      force_overwrite = force_overwrite,
-                      rmcube_name   = rmcube_name,
-                      rmsf_name     = rmsf_name,
-                      log_name      = log_name,
-                      check         = check,
-                      max_mem_gb    = max_mem_gb)
-
-    summary()
-
     if not file_exists(output):
         print('output dir '+output+' does not yet exist; it will be created')
+
+    if not check:
+        if not file_exists(output):
+            os.mkdir(output)
+
+    phi = arange(low, high+dphi*0.1, dphi)
 
     if file_exists(log_name):
         if force_overwrite:
@@ -350,23 +390,30 @@ def main(argv):
                   log_name)
             return -1
 
+    initialize_logging(output)
+    #pylint: disable=bad-whitespace
+    log_summary(argv,
+                qname         = qname,
+                uname         = uname,
+                frequencyname = frequencyname,
+                output_dir    = output,
+                low_phi       = low,
+                high_phi      = high,
+                dphi          = dphi,
+                force_overwrite = force_overwrite,
+                rmcube_name   = rmcube_name,
+                rmsf_name     = rmsf_name,
+                log_name      = log_name,
+                check         = check,
+                max_mem_gb    = max_mem_gb)
+
+
+
     if not proper_fits_shapes(qname, uname, frequencyname):
         return -1
 
-    # Write log file
-
-    if not check:
-        if not file_exists(output):
-            os.mkdir(output)
-        saveout = sys.stdout
-        sys.stdout = open(log_name, 'w')
-        summary()
-        sys.stdout.close()
-        sys.stdout = saveout
-
 
     # Finally, do the work...
-
     if not check:
         rmsynthesis_dirty_lowmem_main(qname, uname,
                                       qfactor, ufactor,
@@ -384,7 +431,7 @@ if __name__ == "__main__":
     try:
         exit(main(sys.argv))
     except (OSError, IOError):
-        print('error: '+str(sys.exc_info()[1]))
+        logging.error('error: '+str(sys.exc_info()[1]))
         exit(-1)
     except (GetoptError, ParseError, ShapeError):
         print(sys.exc_info()[1])

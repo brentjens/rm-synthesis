@@ -8,7 +8,7 @@ from numpy import complex64, array_split, absolute    #pylint: disable=E0611
 
 
 import multiprocessing as mp
-import gc, os, sys, ctypes
+import gc, os, sys, ctypes, logging
 
 try:
     from itertools import izip
@@ -50,7 +50,7 @@ def file_exists(filename, verbose=False):
     except (OSError,):
         err = sys.exc_info()[1]
         if verbose:
-            print('error: '+str(err)) #pylint: disable=superfluous-parens
+            logging.error('error: '+str(err))
         return False
 
 
@@ -277,7 +277,7 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
     num = len(phi_array)
     nfreq = len(frequencies)
     for i, phi in enumerate(phi_array):
-        print('processing frame %4d/%d, phi = %7.1f' % (i+1, num, phi))
+        logging.info('processing frame %4d/%d, phi = %7.1f' % (i+1, num, phi))
         phases = phases_lambda2_to_phi(wl2-wl2_0, phi)[:, newaxis, newaxis]
         rmcube[i, :, :] = (p_complex*phases).sum(axis=0)/nfreq
     return rmcube
@@ -306,7 +306,7 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
     frame_id = 0
     wl2_norm = wl2 - wl2_0
     for q_frame, u_frame in izip(q_frames, u_frames):
-        print('processing frame '+str(frame_id+1)+'/'+str(nfreq))
+        logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
         p_complex = q_frame*q_factor + 1.0j*u_frame*u_factor
         wl2_frame = wl2_norm[frame_id]
         phases = phases_lambda2_to_phi(wl2_frame, phi_array)
@@ -383,7 +383,7 @@ def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor,
         worker.start()
 
     for q_frame, u_frame in izip(q_frames, u_frames):
-        print('processing frame '+str(frame_id+1)+'/'+str(nfreq))
+        logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
         p_complex[:, :] = q_frame*q_factor + 1.0j*u_frame*u_factor
         wl2_frame = wl2_norm[frame_id]
 
@@ -395,7 +395,7 @@ def rmsynthesis_dirty_lowmem_mp(qname, uname, q_factor, u_factor,
         gc.collect()
     for queue in queues:
         queue.put(None)
-    print('Collecting partial results')
+    logging.info('Collecting partial results')
     partial_rmcubes = [queue.get() for queue in queues]
     rmcube = concatenate(partial_rmcubes)/nfreq
     for worker in workers:
@@ -535,12 +535,12 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
     try:
         for block in range(num_blocks):
             phi = phi_rad_m2[block*block_length:(block+1)*block_length]
-            print('Processing block %d / %d' % (block + 1, num_blocks))
-            print('Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1]))
+            logging.info('Processing block %d / %d' % (block + 1, num_blocks))
+            logging.info('Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1]))
             rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
                                               q_factor, u_factor,
                                               freq_hz, phi)
-            print('Saving data')
+            logging.info('Saving data')
 
             p_out.write(absolute(rmcube))
             q_out.write(rmcube.real)
@@ -549,4 +549,4 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
         p_out.close()
         q_out.close()
         u_out.close()
-        print('Done')
+        logging.info('Done')
