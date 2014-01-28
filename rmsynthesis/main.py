@@ -50,7 +50,7 @@ def file_exists(filename, verbose=False):
     except (OSError,):
         err = sys.exc_info()[1]
         if verbose:
-            logging.error('error: '+str(err))
+            logging.error(str(err))
         return False
 
 
@@ -240,16 +240,16 @@ def proper_fits_shapes(qname, uname, frequencyname):
     errors = []
     for name, hdr in [(qname, q_h), (uname, u_h)]:
         if hdr['NAXIS'] != 3:
-            errors.append('error: number of axes in %s  is  %d, not 3' %
+            errors.append('number of axes in %s  is  %d, not 3' %
                           (name, hdr['NAXIS']))
 
     for axis in ['NAXIS1', 'NAXIS2', 'NAXIS3']:
         if q_h[axis] != u_h[axis]:
-            errors.append('error: %s in %s (%d) not equal to %s in %s (%d)' %
+            errors.append('%s in %s (%d) not equal to %s in %s (%d)' %
                           (axis, qname, q_h[axis], axis, uname, u_h[axis]))
 
     if q_h['NAXIS3'] != len(frequencies):
-        msg = ('error: frames in %r and %r (%d) not the same as in %r (%d)' %
+        msg = ('frames in %r and %r (%d) not the same as in %r (%d)' %
                (qname, uname, q_h['NAXIS3'], frequencyname, len(frequencies)))
         errors.append(msg)
     if len(errors) > 0:

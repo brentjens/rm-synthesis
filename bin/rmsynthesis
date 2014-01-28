@@ -1,30 +1,27 @@
 #!/usr/bin/env python2
 # -*- python -*-
 
-from getopt import gnu_getopt as getopt
-from getopt import GetoptError
+#from getopt import gnu_getopt as getopt
+#from getopt import GetoptError
 import os, sys, time
 
 from rmsynthesis.main import ShapeError, ParseError, compute_rmsf, write_rmsf
 from rmsynthesis.main import file_exists, proper_fits_shapes
 from rmsynthesis.main import wavelength_squared_m2_from_freq_hz
 from rmsynthesis.main import rmsynthesis_dirty_lowmem_main, parse_frequency_file
-from rmsynthesis.main import RMSYNTHESIS_VERSION
+from rmsynthesis.main import RMSYNTHESIS_VERSION, __version__
 
 from numpy import arange, array, ceil, sqrt #pylint: disable=no-name-in-module
-import logging
+import logging, argparse
 
 
-def initialize_logging(log_dir, log_level='INFO'):
+def initialize_logging(log_level='INFO'):
     r'''
     Initialize the Python logging system. The log file will be written
     to ``log_dir/pps-tuning-<STATION_NAME>.log``.
 
     **Parameters**
 
-    log_dir : string
-        Directory where the log file must be written.
- 
     log_level : string
         Minimum log level of lines to write into the
         log file. Possible values are 'DEBUG', 'INFO', 'WARNING', and
@@ -32,12 +29,12 @@ def initialize_logging(log_dir, log_level='INFO'):
 
     **Returns**
 
-    A string containing the log file name.
+    A tuple (logger, formatter, level).
 
     **Examples**
 
-    >>> initialize_logging('testdata/', log_level = 'INFO')
-    'testdata/rmsyntesis.log'
+    >>> initialize_logging(log_level = 'INFO')
+    logger, formatter, level
     '''
     log_levels   = {'DEBUG'  : logging.DEBUG,
                     'INFO'   : logging.INFO,
@@ -47,30 +44,35 @@ def initialize_logging(log_dir, log_level='INFO'):
     
     log_format     = ('rmsynthesis:' +
                       ' %(asctime)s %(levelname)8s - %(message)s')
-    log_file_name  = os.path.join(log_dir, 'rmsynthesis.log')
 
     logger       = logging.root
     logger.setLevel(level)
     formatter    = logging.Formatter(log_format)
 
-    file_handler = logging.FileHandler(log_file_name)
-    logger.addHandler(file_handler)
-
-    if len(logger.handlers) == 1:
+    if len(logger.handlers) == 0:
         stream_handler = logging.StreamHandler()
         logger.addHandler(stream_handler)
         
+    return logger, formatter, level
+
+
+def set_log_formats(logger, formatter, level):
+    r'''
+    Set the formatter for all loggers. Use logger, formatter, and
+    level arguments returned by initialize_logging()
+    '''
     for handler in logger.handlers:
         handler.setFormatter(formatter)
         handler.setLevel(level)
-
-    return log_file_name
-
-
+    
 
 
 
 def warn(msg):
+    r'''
+    Provide an interactive warning to the user.
+    '''
+    logging.warn(msg)
     print('')
     print('|' + '-'*78 + '|')
     print('| WARNING: '+msg)
@@ -132,57 +134,35 @@ def log_summary(argv, **kwargs):
     logging.info('')
 
 
-def print_help():
-    print("""Usage
------
-
-  rmsynthesis [options] <Q-directory> <U-directory>
-
-or
-
-  rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
-
-  -o/--output <directory>    Output directory (Default: .)
-
-  -l/--low <phi>             Lowest Faraday depth in output cube.
-                             Default value is
-                             -sqrt(3)/delta (lambda^2),
-                             where delta (lambda^2) is the smallest
-                             one as computed from the frequency list.
-
-  -h/--high <phi>            Highest Faraday depth in output cube.
-                             Default value is
-                             +sqrt(3)/delta (lambda^2),
-                             where delta (lambda^2) is the smallest
-                             one computed from the frequency list.
-
-  -d/--dphi <delta phi>      Faraday depth increment between frames
-                             from the RM cube. Default value is
-                             sqrt(3)/Delta (lambda^2), where Delta
-                             (lambda^2) is max(lambda^2) -
-                             min(lambda^2), computed from the
-                             frequency list.
-
-  -f/--force                 Force overwriting files in output
-                             directory if they already exist.
-
-  -c/--check                 Perform all possible checks, but do not
-                             write any files or compute an RM cube.
-
-  -q/--qfactor <qf>          Factor to multiply values in Q cube with,
-                             Default value is 1.0
-
-  -u/--ufactor <uf>          Factor to multiply values in U cube with,
-                             Default value is 1.0. For WSRT data, this
-                             factor must be 1.2 if it has not already
-                             been applied.
-
-  -m/--max-mem <GB>          Maximum amount of memory to be used in GB.
-                             Default is %.1f GB.
-
-  -v/--version               Display version information.
 
 
+def max_memory_gb(fraction=0.8):
+    r'''
+    Determine the maximum amount of memory available for RM synthesis.
+    '''
+    if os.path.exists('/proc/meminfo'):
+        words = [line for line in open('/proc/meminfo').readlines()
+                 if 'MemTotal'.lower() in line.lower()][0].split()[1:]
+        mem = float(words[0])
+        if words[1] == 'kB':
+            mem *= 1024
+        else:
+            raise ValueError(
+                'Do not know how to handle memory in %s' % words[1])
+        return fraction*mem/(1024**3)
+    else:
+        return 3.0
+
+
+
+
+
+
+def parse_command_line():
+    r'''
+    Parse the commandline using the argparse module.
+    '''
+    parser = argparse.ArgumentParser(epilog='''
 Input
 -----
 
@@ -231,28 +211,73 @@ otherwise specified with the -o option.
 
 - rmsynthesis.log     Contains the command line options used to obtain
                       this output.
-""" % max_memory_gb())
-    return -1
+    ''',
+    formatter_class = argparse.RawDescriptionHelpFormatter)
+    arg = parser.add_argument
+    arg('qcube', metavar='QCUBE', type=str, nargs=1,
+        help='FITS file containing the Q cube.')
+    arg('ucube', metavar='UCUBE', type=str, nargs=1,
+        help='FITS file containing the U cube.')
+    arg('freq_file', metavar='FREQ_FILE', type=str, nargs=1,
+        help='Ascii file with frame frequencies.')
+    arg('--output', '-o', metavar='DIRECTORY',
+        help    = 'Name of the output directory [%(default)s].',
+        default = '.')
+    arg('--low', metavar='PHI',
+        type=float,
+        help = '''
+Lowest Faraday depth in output cube. Default value is
+-sqrt(3)/delta (lambda^2), where delta (lambda^2) is the smallest
+one as computed from the frequency list.''',
+        default=None)
+    arg('--high', metavar='PHI',
+        type=float,
+        help = '''
+Highest Faraday depth in output cube. Default value is
++sqrt(3)/delta (lambda^2), where delta (lambda^2) is the smallest
+one as computed from the frequency list.''',
+        default=None)
+    arg('--dphi', metavar='DELTA_PHI',
+        type=float,
+        help = '''
+Faraday depth increment between frames
+from the RM cube. Default value is
+sqrt(3)/Delta (lambda^2), where Delta
+(lambda^2) is max(lambda^2) -
+min(lambda^2), computed from the
+frequency list.''',
+        default=None)
+    arg('-f', '--force', action='store_true',
+        help='''
+Force overwriting files in output directory if they
+already exist.''',
+        default=False)
+    arg('-c', '--check', action='store_true',
+        help='''
+Perform all possible checks, but do not write any files or compute an RM cube''',
+        default=False)
+    arg('-q', '--qfactor', metavar='QFACTOR',
+        type=float,
+        help='''Factor to multiply values in Q cube with,
+Default [%(default)f]''',
+        default=1.0)
+    arg('-u', '--ufactor', metavar='UFACTOR',
+        type=float,
+        help='''Factor to multiply values in U cube with,
+Default [%(default)f]. For WSRT data, this
+factor must be 1.2 if it has not already been applied.''',
+        default=1.0)
+    arg('-m', '--maxmem', metavar='GB',
+        type=float,
+        help='Maximum amount of memory to be used in GB. Default: [%(default)f]',
+        default=max_memory_gb())
+    arg('-v', '--version', action='version',
+        version = '%(prog)s ' +__version__+
+        ' (c) 2004-2014 M.A. Brentjens <brentjens@astron.nl>',
+        help = 'Print version number and exit.')
 
-
-
-def max_memory_gb(fraction=0.8):
-    r'''
-    Determine the maximum amount of memory available for RM synthesis
-    '''
-    if os.path.exists('/proc/meminfo'):
-        words = [line for line in open('/proc/meminfo').readlines()
-                 if 'MemTotal'.lower() in line.lower()][0].split()[1:]
-        mem = float(words[0])
-        if words[1] == 'kB':
-            mem *= 1024
-        else:
-            raise ValueError(
-                'Do not know how to handle memory in %s' % words[1])
-        return fraction*mem/(1024**3)
-    else:
-        return 3.0
-
+    args = parser.parse_args()
+    return args, parser
 
 
 
@@ -262,72 +287,44 @@ def max_memory_gb(fraction=0.8):
 #  MAIN routine
 #
 
-
 def main(argv):
+    logger, formatter, level = initialize_logging(log_level='INFO')
+    set_log_formats(logger, formatter, level)
+    args, parser = parse_command_line()
+    log_file_name = None
     if len(argv) == 1:
-        return print_help()
-    options, arguments = getopt(argv[1:],
-                                'o:l:h:d:q:u:fcvm:',
-                                ['output=',
-                                 'low=',
-                                 'high=',
-                                 'dphi=',
-                                 'qfactor=',
-                                 'ufactor=',
-                                 'max-mem=',
-                                 'force',
-                                 'check',
-                                 'version'])
-    # Default values
+        return parser.print_help()
+    if not file_exists(args.output):
+        logging.info('output dir '+args.output+' does not yet exist; it will be created')
+    if not args.check:
+        if not file_exists(args.output):
+            os.mkdir(args.output)
+        log_file_name = os.path.join(args.output, 'rmsynthesis.log')
+        if file_exists(log_file_name):
+            if args.force:
+                warn('warning: file %s already exists; it will be overwritten' %
+                     log_file_name)
+            else:
+                logging.error('file %s already exists; use --force to overwrite' %
+                      log_file_name)
+                return -1
+        file_handler = logging.FileHandler(log_file_name)
+        logger.addHandler(file_handler)
+        set_log_formats(logger, formatter, level)
 
-    output = '.'
-    low = None
-    high = None
-    dphi = None
-    force_overwrite = False
-    check = False
-    dphi_user_override = False
-    qfactor = 1.0
-    ufactor = 1.0
-    max_mem_gb = max_memory_gb(fraction=0.8)
+    rmcube_name = os.path.join(args.output, '{p-,q-,u-}rmcube-dirty.fits')
+    rmsf_name = os.path.join(args.output, 'rmsf.txt')
 
-    for (option, value) in options:
-        if   option in ['-o', '--output']:
-            output = value
-        elif option in ['-l', '--low']:
-            low = float(value)
-        elif option in ['-h', '--high']:
-            high = float(value)
-        elif option in ['-d', '--dphi']:
-            dphi = float(value)
-            dphi_user_override = True
-        elif option in ['-q', '--qfactor']:
-            qfactor = float(value)
-        elif option in ['-u', '--ufactor']:
-            ufactor = float(value)
-        elif option in ['-m', '--max-mem']:
-            max_mem_gb = float(value)
-        elif option in ['-f', '--force']:
-            force_overwrite = True
-        elif option in ['-c', '--check']:
-            check = True
-        elif option in ['-v', '--version']:
-            print(
-                'rmsynthesis %s (c) 2005-2014 M.A. Brentjens <brentjens@astron.nl>' %
-                RMSYNTHESIS_VERSION)
-            exit(0)
-
-    if len(arguments) != 3:
-        raise GetoptError(
-            'error: provide Q and U FITS cubes and a frequency text file')
-
-    files_exist = [file_exists(arg, verbose=True) for arg in arguments]
+    files_exist = [file_exists(arg, verbose=True)
+                   for arg in [args.qcube[0], args.ucube[0], args.freq_file[0]]]
     if not all(files_exist):
-        print(
-            'error: provide Q and U FITS cubes and a frequency text file')
+        logging.error(
+            'provide Q and U FITS cubes and a frequency text file')
         return -1
 
-    qname, uname, frequencyname = arguments
+    qname = args.qcube[0]
+    uname = args.ucube[0]
+    frequencyname = args.freq_file[0]
     if qname == uname:
         warn('Q name ('+qname+') and U name ('+uname+' are the same')
     if frequencyname[-4:].lower() == 'fits':
@@ -338,90 +335,73 @@ def main(argv):
     sorted_wl2 = array(sorted(wl2))
     smallest_dl2 = min(abs(sorted_wl2[1:] - sorted_wl2[0:-1]))
     if abs(smallest_dl2) == 0.0:
-        print('error: two frames have equal frequency')
+        logging.error('two frames have equal frequency')
         return -1
 
-    if low is None:
+    if args.low is None:
         low = -sqrt(3)/smallest_dl2
+    else:
+        low = args.low
 
-    if high is None:
+    if args.high is None:
         high = +sqrt(3)/smallest_dl2
+    else:
+        high = args.high
 
-    if dphi is None:
+    if args.dphi is None:
         dphi = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
+    else:
+        dphi = args.dphi
 
     # Normalize dphi so that there is an integer number
     # of frames between low and high (inclusive)
+    dphi_user_override = args.dphi or args.low or args.high
     if not dphi_user_override:
         if low < 0 and high > 0:
             lowframes = ceil(abs(0-low)/dphi)
             dphi = abs((0-low)*(1.0-1e-15)/(lowframes+1))
         else:
-            ValueError('error: low phi limit ('+str(low)+
+            ValueError('low phi limit ('+str(low)+
                        ') must be negative and high phi limit ('+str(high)+
                        ') positive')
 
-    if qfactor == 0:
+    if args.qfactor == 0:
         warn('Q factor is 0.0')
-    if ufactor == 0:
+    if args.ufactor == 0:
         warn('U factor is 0.0')
-    if max_mem_gb < 0.5:
+    if args.maxmem < 0.5:
         warn('Maximum allowed memory is < 500 MB')
-
-    rmcube_name = os.path.join(output, '{p-,q-,u-}rmcube-dirty.fits')
-    rmsf_name = os.path.join(output, 'rmsf.txt')
-    log_name = os.path.join(output, 'rmsynthesis.log')
-
-    if not file_exists(output):
-        print('output dir '+output+' does not yet exist; it will be created')
-
-    if not check:
-        if not file_exists(output):
-            os.mkdir(output)
 
     phi = arange(low, high+dphi*0.1, dphi)
 
-    if file_exists(log_name):
-        if force_overwrite:
-            print('warning: file %s already exists; it will be overwritten' %
-                  log_name)
-        else:
-            print('error: file %s already exists; use --force to overwrite' %
-                  log_name)
-            return -1
-
-    initialize_logging(output)
     #pylint: disable=bad-whitespace
     log_summary(argv,
                 qname         = qname,
                 uname         = uname,
                 frequencyname = frequencyname,
-                output_dir    = output,
+                output_dir    = args.output,
                 low_phi       = low,
                 high_phi      = high,
                 dphi          = dphi,
-                force_overwrite = force_overwrite,
+                force_overwrite = args.force,
                 rmcube_name   = rmcube_name,
                 rmsf_name     = rmsf_name,
-                log_name      = log_name,
-                check         = check,
-                max_mem_gb    = max_mem_gb)
-
-
+                log_name      = log_file_name,
+                check         = args.check,
+                max_mem_gb    = args.maxmem)
 
     if not proper_fits_shapes(qname, uname, frequencyname):
         return -1
 
-
     # Finally, do the work...
-    if not check:
+    if not args.check:
         rmsynthesis_dirty_lowmem_main(qname, uname,
-                                      qfactor, ufactor,
-                                      output, frequencies,
-                                      phi, force_overwrite,
-                                      max_mem_gb)
+                                      args.qfactor, args.ufactor,
+                                      args.output, frequencies,
+                                      phi, args.force,
+                                      args.maxmem)
         rmsf = compute_rmsf(frequencies, phi)
-        write_rmsf(phi, rmsf, output)
+        write_rmsf(phi, rmsf, args.output)
     return 0
 
 
@@ -431,18 +411,18 @@ if __name__ == "__main__":
     try:
         exit(main(sys.argv))
     except (OSError, IOError):
-        logging.error('error: '+str(sys.exc_info()[1]))
+        logging.error(str(sys.exc_info()[1]))
         exit(-1)
-    except (GetoptError, ParseError, ShapeError):
-        print(sys.exc_info()[1])
-        print('use "'+sys.argv[0]+'" for help.')
+    except (ParseError, ShapeError):
+        logging.error(sys.exc_info()[1])
+        logging.error('use "'+sys.argv[0]+'" for help.')
         exit(-1)
     except (MemoryError, ):
-        print(sys.exc_info()[1])
-        print('The input or output cubes are too large to handle at the moment. They do ')
-        print('not fit in memory together with the intermediate results. Please make the')
-        print('cubes smaller, buy more RAM, or kindly ask the author for an upgrade.')
-        print('use "'+sys.argv[0]+'" for help.')
+        logging.error(sys.exc_info()[1])
+        logging.error('The input or output cubes are too large to handle at the moment. They do ')
+        logging.error('not fit in memory together with the intermediate results. Please make the')
+        logging.error('cubes smaller, buy more RAM, or kindly ask the author for an upgrade.')
+        logging.error('use "'+sys.argv[0]+'" for help.')
         exit(-1)
     except (KeyboardInterrupt, ):
         print('')
