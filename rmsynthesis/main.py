@@ -320,6 +320,48 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
 
 
 
+
+def rmsynthesis_crosscorr_dirty_lowmem(q_template_name, u_template_name,
+                                       qname, uname, q_factor, u_factor,
+                                       frequencies, phi_array):
+    """Perform a cross correlation in Faraday space by multiplying QU
+    frames with template QU frames, and performing an RM synthesis on
+    the resulting Q and U image cubes with given frequencies. The
+    rmcube that is returned is complex valued and has a frame for
+    every value in phi_array. It is assumed that the dimensions of
+    qcube, ucube, and frequencies have been verified before with the
+    help of the proper_fits_shapes() function. The polarization
+    vectors are derotated to the average lambda^2.
+    """
+    wl2 = wavelength_squared_m2_from_freq_hz(frequencies)
+    qheader = fits.get_header(qname)
+    rmcube = zeros((len(phi_array), qheader['NAXIS2'], qheader['NAXIS1']),
+                   dtype=complex64)
+    wl2_0 = wl2.mean()
+
+    nfreq = len(frequencies)
+    q_template_frames = fits.image_frames(q_template_name)
+    u_template_frames = fits.image_frames(u_template_name)
+    q_frames = fits.image_frames(qname)
+    u_frames = fits.image_frames(uname)
+    frame_id = 0
+    wl2_norm = wl2 - wl2_0
+    for q_temp, u_temp, q_frame, u_frame in izip(q_template_frames, u_template_frames, q_frames, u_frames):
+        logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
+        template_complex = q_temp*q_factor +1.0j*u_temp*u_factor
+        p_complex = (q_frame*q_factor + 1.0j*u_frame*u_factor)*template_complex.conj()
+        wl2_frame = wl2_norm[frame_id]
+        phases = phases_lambda2_to_phi(wl2_frame, phi_array)
+        for frame, phase in enumerate(phases):
+            rmcube[frame, :, :] += p_complex*phase
+        frame_id += 1
+        gc.collect()
+
+    return rmcube/nfreq
+
+
+
+
 def rmsynthesis_worker(queue, shared_arr, frame_shape, phi_array):
     r'''
     '''
