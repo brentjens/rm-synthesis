@@ -577,11 +577,67 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
     try:
         for block in range(num_blocks):
             phi = phi_rad_m2[block*block_length:(block+1)*block_length]
-            logging.info('Processing block %d / %d' % (block + 1, num_blocks))
-            logging.info('Phi in  [%.1f, %.1f]'     % (phi[0], phi[-1]))
+            logging.info('Processing block %d / %d', block + 1, num_blocks)
+            logging.info('Phi in  [%.1f, %.1f]', phi[0], phi[-1])
             rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
                                               q_factor, u_factor,
                                               freq_hz, phi)
+            logging.info('Saving data')
+
+            p_out.write(absolute(rmcube))
+            q_out.write(rmcube.real)
+            u_out.write(rmcube.imag)
+    finally:
+        p_out.close()
+        q_out.close()
+        u_out.close()
+        logging.info('Done')
+
+
+
+
+
+def rmsynthesis_crosscorr_dirty_lowmem_main(q_template_name, u_template_name,
+                                            q_name, u_name,
+                                            q_factor, u_factor,
+                                            output_dir, freq_hz, phi_rad_m2,
+                                            force_overwrite, max_mem_gb=2.0):
+    r'''
+    '''
+    q_header = fits.get_header(q_name)
+    pixels_per_frame = q_header['NAXIS1']*q_header['NAXIS2']
+
+    max_mem_bytes = max_mem_gb*1024**3
+    bytes_per_output_pixel = 4
+    max_output_pixels = max_mem_bytes/bytes_per_output_pixel
+    # 7 = (re, im) + p_out + q_out + u_out
+    block_length = int(floor(max_output_pixels/pixels_per_frame/9.0))
+    num_blocks = int(floor(len(phi_rad_m2)/block_length))
+    if len(phi_rad_m2) % block_length > 0:
+        num_blocks += 1
+
+
+    output_header = add_phi_to_fits_header(q_header.copy(), phi_rad_m2)
+    p_out_name, q_out_name, u_out_name = output_pqu_fits_names(output_dir)
+    p_out_hdr, q_out_hdr, u_out_hdr = output_pqu_headers(output_header)
+    p_out, q_out, u_out = [fits.streaming_output_hdu(fits_name,
+                                                     header,
+                                                     force_overwrite)
+                           for fits_name, header in [(p_out_name, p_out_hdr),
+                                                     (q_out_name, q_out_hdr),
+                                                     (u_out_name, u_out_hdr)]]
+    try:
+        logging.info('Computing cross correlation with templates\n  - Q:%s\n  - U:%s',
+                     q_template_name, u_template_name)
+        for block in range(num_blocks):
+            phi = phi_rad_m2[block*block_length:(block+1)*block_length]
+            logging.info('Processing block %d / %d', block + 1, num_blocks)
+            logging.info('Phi in  [%.1f, %.1f]', phi[0], phi[-1])
+            rmcube = rmsynthesis_crosscorr_dirty_lowmem(
+                q_template_name, u_template_name,
+                q_name, u_name,
+                q_factor, u_factor,
+                freq_hz, phi)
             logging.info('Saving data')
 
             p_out.write(absolute(rmcube))
