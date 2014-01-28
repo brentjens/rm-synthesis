@@ -22,45 +22,44 @@ Install using:
 Usage
 -----
 
-rmsynthesis [options] <Qcube.fits> <Ucube.fits> <frequencies.txt>
+usage: rmsynthesis [-h] [--output DIRECTORY] [--low PHI] [--high PHI]
+                   [--dphi DELTA_PHI] [-f] [-c] [-q QFACTOR] [-u UFACTOR]
+                   [-m GB] [-v]
+                   QCUBE UCUBE FREQ_FILE
 
-  -o/--output <directory>    Output directory (Default: .)
+positional arguments:
+  QCUBE                 FITS file containing the Q cube.
+  UCUBE                 FITS file containing the U cube.
+  FREQ_FILE             Ascii file with frame frequencies.
 
-  -l/--low <phi>             Lowest Faraday depth in output cube.
-                             Default value is 
-                             -sqrt(3)/delta (lambda^2),
-                             where delta (lambda^2) is the smallest
-                             one as computed from the frequency list.
-
-  -h/--high <phi>            Highest Faraday depth in output cube.
-                             Default value is 
-                             +sqrt(3)/delta (lambda^2),
-                             where delta (lambda^2) is the smallest
-                             one computed from the frequency list.
-  
-  -d/--dphi <delta phi>      Faraday depth increment between frames
-                             from the RM cube. Default value is
-                             sqrt(3)/Delta (lambda^2), where Delta
-                             (lambda^2) is max(lambda^2) -
-                             min(lambda^2), computed from the
-                             frequency list.
-
-  -f/--force                 Force overwriting files in output
-                             directory if they already exist.
-
-  -c/--check                 Perform all possible checks, but do not
-                             write any files or compute an RM cube.
-
-  -q/--qfactor <qf>          Factor to multiply values in Q cube with,
-                             Default value is 1.0
-
-  -u/--ufactor <uf>          Factor to multiply values in U cube with,
-                             Default value is 1.0. For WSRT data, this
-                             factor must be 1.2 if it has not already
-                             been applied.
-
-  -v/--version               Display version information.
-
+optional arguments:
+  -h, --help            show this help message and exit
+  --output DIRECTORY, -o DIRECTORY
+                        Name of the output directory [.].
+  --low PHI             Lowest Faraday depth in output cube. Default value is
+                        -sqrt(3)/delta (lambda^2), where delta (lambda^2) is
+                        the smallest one as computed from the frequency list.
+  --high PHI            Highest Faraday depth in output cube. Default value is
+                        +sqrt(3)/delta (lambda^2), where delta (lambda^2) is
+                        the smallest one as computed from the frequency list.
+  --dphi DELTA_PHI      Faraday depth increment between frames from the RM
+                        cube. Default value is sqrt(3)/Delta (lambda^2), where
+                        Delta (lambda^2) is max(lambda^2) - min(lambda^2),
+                        computed from the frequency list.
+  -f, --force           Force overwriting files in output directory if they
+                        already exist.
+  -c, --check           Perform all possible checks, but do not write any
+                        files or compute an RM cube
+  -q QFACTOR, --qfactor QFACTOR
+                        Factor to multiply values in Q cube with, Default
+                        [1.000000]
+  -u UFACTOR, --ufactor UFACTOR
+                        Factor to multiply values in U cube with, Default
+                        [1.000000]. For WSRT data, this factor must be 1.2 if
+                        it has not already been applied.
+  -m GB, --maxmem GB    Maximum amount of memory to be used in GB. Default:
+                        [12.505261]
+  -v, --version         Print version number and exit.
 
 Input
 -----
@@ -81,16 +80,15 @@ The third required input is the list of frequencies. This must be a
 text file with one frequency per line. The frequency must be in Hz and
 can be either an integer or a floating point number. A (tiny) example:
 
-  1.420e9
-  1680000000
-  4800000000
-
+1.420e9
+1680000000
+4800000000
 
 Output
 ------
 
 The output files are written in the current working directory, unless
-otherwise specified with the -o option. 
+otherwise specified with the -o option.
 
 - p-rmcube-dirty.fits FITS cube with axis RA (AXIS1), Dec (AXIS2),
                       Faraday depth (AXIS3). Total linear polarization.
@@ -110,7 +108,7 @@ otherwise specified with the -o option.
 
 - rmsynthesis.log     Contains the command line options used to obtain
                       this output.
-
+    
 
                       
 
