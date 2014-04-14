@@ -17,8 +17,7 @@ import logging, argparse
 
 def initialize_logging(log_level='INFO'):
     r'''
-    Initialize the Python logging system. The log file will be written
-    to ``log_dir/pps-tuning-<STATION_NAME>.log``.
+    Initialize the Python logging system.
 
     **Parameters**
 
