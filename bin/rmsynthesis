@@ -1,14 +1,13 @@
 #!/usr/bin/env python2
 # -*- python -*-
 
-#from getopt import gnu_getopt as getopt
-#from getopt import GetoptError
 import os, sys, time
 
 from rmsynthesis.main import ShapeError, ParseError, compute_rmsf, write_rmsf
 from rmsynthesis.main import file_exists, proper_fits_shapes
 from rmsynthesis.main import wavelength_squared_m2_from_freq_hz
 from rmsynthesis.main import rmsynthesis_dirty_lowmem_main, parse_frequency_file
+from rmsynthesis.main import rmsynthesis_crosscorr_dirty_lowmem_main
 from rmsynthesis.main import RMSYNTHESIS_VERSION, __version__
 
 from numpy import arange, array, ceil, sqrt #pylint: disable=no-name-in-module
@@ -48,6 +47,9 @@ def initialize_logging(log_level='INFO'):
     logger.setLevel(level)
     formatter    = logging.Formatter(log_format)
 
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+
     if len(logger.handlers) == 0:
         stream_handler = logging.StreamHandler()
         logger.addHandler(stream_handler)
@@ -74,7 +76,10 @@ def warn(msg):
     logging.warn(msg)
     print('')
     print('|' + '-'*78 + '|')
-    print('| WARNING: '+msg)
+    full_msg = '| WARNING: '+msg
+    full_msg += ' '*(79 - len(full_msg))
+    full_msg += '|'
+    print(full_msg)
     print('|' + '-'*78 + '|')
     print('')
     wrong_answer = True
@@ -119,6 +124,8 @@ def log_summary(argv, **kwargs):
     prkv('Q cube', kwargs['qname'])
     prkv('U cube', kwargs['uname'])
     prkv('Frequencies', kwargs['frequencyname'])
+    prkv('Q template cube', kwargs['qtemplate'])
+    prkv('U template cube', kwargs['utemplate'])
     prkv('Output dir', kwargs['output_dir'])
     prkv('Force overwrite', kwargs['force_overwrite'])
     prkv('Check only', kwargs['check'])
@@ -186,6 +193,12 @@ can be either an integer or a floating point number. A (tiny) example:
 4800000000
 
 
+If additional template Q and U cubes are provided, those cubes will be
+used to calculate the cross correlation between the RM cube from the
+input Q and U cubes and the RM cube from the template. This can be
+used to investigate spatial variations in Faraday depth between the
+template and the input.
+
 Output
 ------
 
@@ -219,6 +232,10 @@ otherwise specified with the -o option.
         help='FITS file containing the U cube.')
     arg('freq_file', metavar='FREQ_FILE', type=str, nargs=1,
         help='Ascii file with frame frequencies.')
+    arg('template_qcube', metavar='TMPL_QCUBE', type=str, nargs='?',
+        help='FITS file containing the Q template cube (optional).')
+    arg('template_ucube', metavar='TMPL_UCUBE', type=str, nargs='?',
+        help='FITS file containing the U template cube (optional).')
     arg('--output', '-o', metavar='DIRECTORY',
         help    = 'Name of the output directory [%(default)s].',
         default = '.')
@@ -301,7 +318,7 @@ def main(argv):
         log_file_name = os.path.join(args.output, 'rmsynthesis.log')
         if file_exists(log_file_name):
             if args.force:
-                warn('warning: file %s already exists; it will be overwritten' %
+                warn('%s already exists; it will be overwritten' %
                      log_file_name)
             else:
                 logging.error('file %s already exists; use --force to overwrite' %
@@ -314,20 +331,38 @@ def main(argv):
     rmcube_name = os.path.join(args.output, '{p-,q-,u-}rmcube-dirty.fits')
     rmsf_name = os.path.join(args.output, 'rmsf.txt')
 
+    input_files = [args.qcube[0], args.ucube[0], args.freq_file[0]]
+    if args.template_qcube and (args.template_ucube is None):
+        logging.error('Q template (%r) specified without U template.',
+                      args.template_qcube)
+        return -1
+    if args.template_qcube and args.template_ucube:
+        input_files += [args.template_qcube, args.template_ucube]
     files_exist = [file_exists(arg, verbose=True)
-                   for arg in [args.qcube[0], args.ucube[0], args.freq_file[0]]]
+                   for arg in input_files]
     if not all(files_exist):
         logging.error(
-            'provide Q and U FITS cubes and a frequency text file')
+            'Provide Q and U FITS cubes and a frequency text file (optionally Q/U templates).')
+        logging.error('-----------------------------------------------------')
+        logging.error('PARAMETER     FILE_NAME                       EXISTS?')
+        logging.error('-----------------------------------------------------')
+        for par, fname, exists in zip(['QCUBE', 'UCUBE', 'FREQ_FILE', 'TMPL_QCUBE', 'TMPL_UCUBE'],
+                                      input_files, files_exist):
+            logging.error('%12s  %30s  %r', par.ljust(12), fname.ljust(30), exists)
+        logging.error('-----------------------------------------------------')
         return -1
 
     qname = args.qcube[0]
     uname = args.ucube[0]
     frequencyname = args.freq_file[0]
     if qname == uname:
-        warn('Q name ('+qname+') and U name ('+uname+' are the same')
+        warn('Q name ('+qname+') and U name ('+uname+') are the same')
     if frequencyname[-4:].lower() == 'fits':
         warn('Frequency file ('+frequencyname+') might be a fits file')
+    if args.template_qcube and (args.template_qcube == args.template_ucube):
+        warn('Q template name ('
+             + args.template_qcube +') and U template name ('
+             + args.template_ucube +') are the same')
 
     frequencies = parse_frequency_file(frequencyname)
     wl2 = wavelength_squared_m2_from_freq_hz(frequencies)
@@ -369,7 +404,7 @@ def main(argv):
     if args.ufactor == 0:
         warn('U factor is 0.0')
     if args.maxmem < 0.5:
-        warn('Maximum allowed memory is < 500 MB')
+        warn('Maximum allowed memory is < 500 MB!')
 
     phi = arange(low, high+dphi*0.1, dphi)
 
@@ -378,6 +413,8 @@ def main(argv):
                 qname         = qname,
                 uname         = uname,
                 frequencyname = frequencyname,
+                qtemplate     = args.template_qcube,
+                utemplate     = args.template_ucube,
                 output_dir    = args.output,
                 low_phi       = low,
                 high_phi      = high,
@@ -394,11 +431,21 @@ def main(argv):
 
     # Finally, do the work...
     if not args.check:
-        rmsynthesis_dirty_lowmem_main(qname, uname,
-                                      args.qfactor, args.ufactor,
-                                      args.output, frequencies,
-                                      phi, args.force,
-                                      args.maxmem)
+        if args.template_ucube is None:
+            rmsynthesis_dirty_lowmem_main(qname, uname,
+                                          args.qfactor, args.ufactor,
+                                          args.output, frequencies,
+                                          phi, args.force,
+                                          args.maxmem)
+        else:
+            rmsynthesis_crosscorr_dirty_lowmem_main(
+                q_template_name=args.template_qcube,
+                u_template_name=args.template_ucube,
+                q_name=qname, u_name=uname,
+                q_factor=args.qfactor, u_factor=args.ufactor,
+                output_dir=args.output, freq_hz=frequencies,
+                phi_rad_m2=phi,
+                force_overwrite=args.force, max_mem_gb=args.maxmem)
         rmsf = compute_rmsf(frequencies, phi)
         write_rmsf(phi, rmsf, args.output)
     return 0

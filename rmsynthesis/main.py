@@ -552,6 +552,7 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                                   force_overwrite, max_mem_gb=2.0):
     r'''
     '''
+    logging.info('rmsynthesis_dirty_lowmem_main()')
     q_header = fits.get_header(q_name)
     pixels_per_frame = q_header['NAXIS1']*q_header['NAXIS2']
 
@@ -604,6 +605,7 @@ def rmsynthesis_crosscorr_dirty_lowmem_main(q_template_name, u_template_name,
                                             force_overwrite, max_mem_gb=2.0):
     r'''
     '''
+    logging.info('rmsynthesis_crosscorr_dirty_lowmem_main()')
     q_header = fits.get_header(q_name)
     pixels_per_frame = q_header['NAXIS1']*q_header['NAXIS2']
 
