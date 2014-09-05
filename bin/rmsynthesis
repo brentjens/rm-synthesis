@@ -134,6 +134,7 @@ def log_summary(argv, **kwargs):
     prkv('High phi', kwargs['high_phi'])
     prkv('Delta phi', kwargs['dphi'])
     logging.info('')
+    prkv('Ignore frames', kwargs['ignore_frames'])
     prkv('RM cube', kwargs['rmcube_name'])
     prkv('RMSF', kwargs['rmsf_name'])
     prkv('Log file', kwargs['log_name'])
@@ -263,6 +264,16 @@ sqrt(3)/Delta (lambda^2), where Delta
 min(lambda^2), computed from the
 frequency list.''',
         default=None)
+    arg('-i', '--ignore-frames',
+        help='''
+Comma-separated list of input frames
+that must be ignored for some
+reason. The numbers are the 0-based
+indices along the slowest varying
+axis in the Q and U cubes. For example
+0,3,4,10 will ignore the first, fourth,
+fifth, and eleventh frame from the input.''',
+        default=None)
     arg('-f', '--force', action='store_true',
         help='''
 Force overwriting files in output directory if they
@@ -386,7 +397,10 @@ def main(argv):
         dphi = abs(sqrt(3)/(sorted_wl2[-1]-sorted_wl2[0]))
     else:
         dphi = args.dphi
-
+        
+    ignore_frames = None
+    if args.ignore_frames is not None:
+        ignore_frames = [int(frame) for frame in args.ignore_frames.split(',')]
     # Normalize dphi so that there is an integer number
     # of frames between low and high (inclusive)
     dphi_user_override = args.dphi or args.low or args.high
@@ -424,7 +438,8 @@ def main(argv):
                 rmsf_name     = rmsf_name,
                 log_name      = log_file_name,
                 check         = args.check,
-                max_mem_gb    = args.maxmem)
+                max_mem_gb    = args.maxmem,
+                ignore_frames = ignore_frames)
 
     if not proper_fits_shapes(qname, uname, frequencyname):
         return -1
@@ -436,7 +451,8 @@ def main(argv):
                                           args.qfactor, args.ufactor,
                                           args.output, frequencies,
                                           phi, args.force,
-                                          args.maxmem)
+                                          args.maxmem,
+                                          bad_frames=ignore_frames)
         else:
             rmsynthesis_crosscorr_dirty_lowmem_main(
                 q_template_name=args.template_qcube,
@@ -445,7 +461,8 @@ def main(argv):
                 q_factor=args.qfactor, u_factor=args.ufactor,
                 output_dir=args.output, freq_hz=frequencies,
                 phi_rad_m2=phi,
-                force_overwrite=args.force, max_mem_gb=args.maxmem)
+                force_overwrite=args.force, max_mem_gb=args.maxmem,
+                bad_frames=ignore_frames)
         rmsf = compute_rmsf(frequencies, phi)
         write_rmsf(phi, rmsf, args.output)
     return 0

@@ -285,7 +285,8 @@ def rmsynthesis_dirty(qcube, ucube, frequencies, phi_array):
 
 
 def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
-                             frequencies, phi_array):
+                             frequencies, phi_array,
+                             bad_frames=None):
     """
     Perform an RM synthesis on Q and U image cubes with given
     frequencies. The rmcube that is returned is complex valued and has
@@ -304,18 +305,23 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
     q_frames = fits.image_frames(qname)
     u_frames = fits.image_frames(uname)
     frame_id = 0
+    skipped_frames = 0
     wl2_norm = wl2 - wl2_0
     for q_frame, u_frame in izip(q_frames, u_frames):
-        logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
-        p_complex = q_frame*q_factor + 1.0j*u_frame*u_factor
-        wl2_frame = wl2_norm[frame_id]
-        phases = phases_lambda2_to_phi(wl2_frame, phi_array)
-        for frame, phase in enumerate(phases):
-            rmcube[frame, :, :] += p_complex*phase
-        frame_id += 1
+        if bad_frames is not None and frame_id in bad_frames:
+            logging.warn('skipping frame % d: in bad frame list.', frame_id)
+            skipped_frames += 1
+        else:
+            logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
+            p_complex = q_frame*q_factor + 1.0j*u_frame*u_factor
+            wl2_frame = wl2_norm[frame_id]
+            phases = phases_lambda2_to_phi(wl2_frame, phi_array)
+            for frame, phase in enumerate(phases):
+                rmcube[frame, :, :] += p_complex*phase
         gc.collect()
-
-    return rmcube/nfreq
+        frame_id += 1
+    frames_added = nfreq - skipped_frames
+    return rmcube/float(frames_added)
 
 
 
@@ -323,7 +329,8 @@ def rmsynthesis_dirty_lowmem(qname, uname, q_factor, u_factor,
 
 def rmsynthesis_crosscorr_dirty_lowmem(q_template_name, u_template_name,
                                        qname, uname, q_factor, u_factor,
-                                       frequencies, phi_array):
+                                       frequencies, phi_array,
+                                       bad_frames=None):
     """Perform a cross correlation in Faraday space by multiplying QU
     frames with template QU frames, and performing an RM synthesis on
     the resulting Q and U image cubes with given frequencies. The
@@ -345,19 +352,24 @@ def rmsynthesis_crosscorr_dirty_lowmem(q_template_name, u_template_name,
     q_frames = fits.image_frames(qname)
     u_frames = fits.image_frames(uname)
     frame_id = 0
+    skipped_frames = 0
     wl2_norm = wl2 - wl2_0
     for q_temp, u_temp, q_frame, u_frame in izip(q_template_frames, u_template_frames, q_frames, u_frames):
-        logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
-        template_complex = q_temp*q_factor +1.0j*u_temp*u_factor
-        p_complex = (q_frame*q_factor + 1.0j*u_frame*u_factor)*template_complex.conj()
-        wl2_frame = wl2_norm[frame_id]
-        phases = phases_lambda2_to_phi(wl2_frame, phi_array)
-        for frame, phase in enumerate(phases):
-            rmcube[frame, :, :] += p_complex*phase
-        frame_id += 1
+        if bad_frames is not None and frame_id in bad_frames:
+            logging.warn('skipping frame % d: in bad frame list.', frame_id)
+            skipped_frames += 1
+        else:
+            logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
+            template_complex = q_temp*q_factor +1.0j*u_temp*u_factor
+            p_complex = (q_frame*q_factor + 1.0j*u_frame*u_factor)*template_complex.conj()
+            wl2_frame = wl2_norm[frame_id]
+            phases = phases_lambda2_to_phi(wl2_frame, phi_array)
+            for frame, phase in enumerate(phases):
+                rmcube[frame, :, :] += p_complex*phase
         gc.collect()
-
-    return rmcube/nfreq
+        frame_id += 1
+    frames_added = nfreq - skipped_frames
+    return rmcube/float(frames_added)
 
 
 
@@ -549,7 +561,8 @@ def output_pqu_headers(fits_header):
 
 def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
                                   output_dir, freq_hz, phi_rad_m2,
-                                  force_overwrite, max_mem_gb=2.0):
+                                  force_overwrite, max_mem_gb=2.0,
+                                  bad_frames=None):
     r'''
     '''
     logging.info('rmsynthesis_dirty_lowmem_main()')
@@ -582,7 +595,8 @@ def rmsynthesis_dirty_lowmem_main(q_name, u_name, q_factor, u_factor,
             logging.info('Phi in  [%.1f, %.1f]', phi[0], phi[-1])
             rmcube = rmsynthesis_dirty_lowmem(q_name, u_name,
                                               q_factor, u_factor,
-                                              freq_hz, phi)
+                                              freq_hz, phi,
+                                              bad_frames=bad_frames)
             logging.info('Saving data')
 
             p_out.write(absolute(rmcube))
@@ -602,7 +616,8 @@ def rmsynthesis_crosscorr_dirty_lowmem_main(q_template_name, u_template_name,
                                             q_name, u_name,
                                             q_factor, u_factor,
                                             output_dir, freq_hz, phi_rad_m2,
-                                            force_overwrite, max_mem_gb=2.0):
+                                            force_overwrite, max_mem_gb=2.0,
+                                            bad_frames=None):
     r'''
     '''
     logging.info('rmsynthesis_crosscorr_dirty_lowmem_main()')
@@ -639,7 +654,8 @@ def rmsynthesis_crosscorr_dirty_lowmem_main(q_template_name, u_template_name,
                 q_template_name, u_template_name,
                 q_name, u_name,
                 q_factor, u_factor,
-                freq_hz, phi)
+                freq_hz, phi,
+                bad_frames=bad_frames)
             logging.info('Saving data')
 
             p_out.write(absolute(rmcube))
