@@ -5,7 +5,7 @@ The ``main`` module implements the actual RM-synthesis.
 from numpy import exp, newaxis, array, zeros, floor   #pylint: disable=E0611
 from numpy import concatenate, real, imag, frombuffer #pylint: disable=E0611
 from numpy import complex64, array_split, absolute    #pylint: disable=E0611
-
+from numpy import float32                             #pylint: disable=E0611
 
 import multiprocessing as mp
 import gc, os, sys, ctypes, logging
@@ -666,3 +666,83 @@ def rmsynthesis_crosscorr_dirty_lowmem_main(q_template_name, u_template_name,
         q_out.close()
         u_out.close()
         logging.info('Done')
+
+
+
+def mean_psf(psf_name, frequencies, output_fits_name, force_overwrite,
+             max_mem_gb=2.0, bad_frames=None):
+    logging.info('mean_psf()')
+    psf_header = fits.get_header(psf_name)
+    pixels_per_frame = psf_header['NAXIS1']*psf_header['NAXIS2']
+    max_mem_bytes = max_mem_gb*1024**3
+    bytes_per_input_pixel = psf_header['BITPIX']/8.0
+    max_input_pixels = max_mem_bytes/bytes_per_input_pixel
+    block_length = int(floor(max_input_pixels/pixels_per_frame/4.0))
+    num_blocks = int(floor(psf_header['NAXIS3']/block_length))
+    if psf_header['NAXIS3'] % block_length > 0:
+        num_blocks += 1
+    output_header = psf_header
+
+    nfreq = len(frequencies)
+    psf_frames = fits.image_frames(psf_name)
+    frame_id = 0
+    skipped_frames = 0
+    sum_psf = zeros((psf_header['NAXIS2'], psf_header['NAXIS1']), dtype=float32)
+    sum_freq_hz = 0.0
+    for freq_hz, psf in izip(frequencies, psf_frames):
+        if bad_frames is not None and frame_id in bad_frames:
+            logging.warn('skipping frame % d: in bad frame list.', frame_id)
+            skipped_frames += 1
+        else:
+            logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
+            sum_psf += psf
+            sum_freq_hz += freq_hz
+        gc.collect()
+        frame_id += 1
+    frames_added = nfreq - skipped_frames
+    mean_psf_frame = sum_psf/frames_added
+    mean_freq_hz = sum_freq_hz/frames_added
+    fits.write_cube(output_fits_name, output_header, mean_psf_frame, force_overwrite)
+    logging.info('Done')
+
+
+
+def mean_psf_product(psf_name, template_psf_name, frequencies,
+                     output_fits_name, force_overwrite,
+                     max_mem_gb=2.0, bad_frames=None):
+    logging.info('mean_psf_product()')
+    psf_header = fits.get_header(psf_name)
+    pixels_per_frame = psf_header['NAXIS1']*psf_header['NAXIS2']
+    max_mem_bytes = max_mem_gb*1024**3
+    bytes_per_input_pixel = psf_header['BITPIX']/8.0
+    max_input_pixels = max_mem_bytes/bytes_per_input_pixel
+    block_length = int(floor(max_input_pixels/pixels_per_frame/9.0))
+    num_blocks = int(floor(psf_header['NAXIS3']/block_length))
+    if psf_header['NAXIS3'] % block_length > 0:
+        num_blocks += 1
+    output_header = psf_header
+
+    nfreq = len(frequencies)
+    psf_frames = fits.image_frames(psf_name)
+    template_psf_frames = fits.image_frames(template_psf_name)
+    frame_id = 0
+    skipped_frames = 0
+    sum_psf_product = zeros((psf_header['NAXIS2'], psf_header['NAXIS1']),
+                            dtype=float32)
+    sum_freq_hz = 0.0
+    for freq_hz, psf, tmpl_psf in izip(frequencies, psf_frames, template_psf_frames):
+        if bad_frames is not None and frame_id in bad_frames:
+            logging.warn('skipping frame % d: in bad frame list.', frame_id)
+            skipped_frames += 1
+        else:
+            logging.info('processing frame '+str(frame_id+1)+'/'+str(nfreq))
+            sum_psf_product += psf*tmpl_psf
+            sum_freq_hz += freq_hz
+        gc.collect()
+        frame_id += 1
+    frames_added = nfreq - skipped_frames
+    mean_psf_product_frame = sum_psf_product/frames_added
+    mean_freq_hz = sum_freq_hz/frames_added
+    fits.write_cube(output_fits_name, output_header, mean_psf_product_frame,
+                    force_overwrite)
+    logging.info('Done')

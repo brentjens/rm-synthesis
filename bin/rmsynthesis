@@ -8,6 +8,7 @@ from rmsynthesis.main import file_exists, proper_fits_shapes
 from rmsynthesis.main import wavelength_squared_m2_from_freq_hz
 from rmsynthesis.main import rmsynthesis_dirty_lowmem_main, parse_frequency_file
 from rmsynthesis.main import rmsynthesis_crosscorr_dirty_lowmem_main
+from rmsynthesis.main import mean_psf, mean_psf_product
 from rmsynthesis.main import RMSYNTHESIS_VERSION, __version__
 
 from numpy import arange, array, ceil, sqrt #pylint: disable=no-name-in-module
@@ -126,6 +127,8 @@ def log_summary(argv, **kwargs):
     prkv('Frequencies', kwargs['frequencyname'])
     prkv('Q template cube', kwargs['qtemplate'])
     prkv('U template cube', kwargs['utemplate'])
+    prkv('PSF cube', kwargs['psf_cube'])
+    prkv('Template PSF cube', kwargs['template_psf_cube'])
     prkv('Output dir', kwargs['output_dir'])
     prkv('Force overwrite', kwargs['force_overwrite'])
     prkv('Check only', kwargs['check'])
@@ -237,6 +240,12 @@ otherwise specified with the -o option.
         help='FITS file containing the Q template cube (optional).')
     arg('template_ucube', metavar='TMPL_UCUBE', type=str, nargs='?',
         help='FITS file containing the U template cube (optional).')
+
+    arg('psf_cube', metavar='PSF_CUBE', type=str, nargs='?',
+        help='FITS file containing the PSF cube for the observation (optional).')
+    arg('template_psf_cube', metavar='TMPL_PSF_CUBE', type=str, nargs='?',
+        help='FITS file containing the PSF cube for the template (optional).')
+
     arg('--output', '-o', metavar='DIRECTORY',
         help    = 'Name of the output directory [%(default)s].',
         default = '.')
@@ -349,18 +358,24 @@ def main(argv):
         return -1
     if args.template_qcube and args.template_ucube:
         input_files += [args.template_qcube, args.template_ucube]
+
+    if args.psf_cube:
+        input_files.append(args.psf_cube)
+    if  args.template_psf_cube:
+        input_files.append(args.template_psf_cube)
+
     files_exist = [file_exists(arg, verbose=True)
                    for arg in input_files]
     if not all(files_exist):
         logging.error(
             'Provide Q and U FITS cubes and a frequency text file (optionally Q/U templates).')
-        logging.error('-----------------------------------------------------')
-        logging.error('PARAMETER     FILE_NAME                       EXISTS?')
-        logging.error('-----------------------------------------------------')
-        for par, fname, exists in zip(['QCUBE', 'UCUBE', 'FREQ_FILE', 'TMPL_QCUBE', 'TMPL_UCUBE'],
+        logging.error('-------------------------------------------------------')
+        logging.error('PARAMETER       FILE_NAME                       EXISTS?')
+        logging.error('-------------------------------------------------------')
+        for par, fname, exists in zip(['QCUBE', 'UCUBE', 'FREQ_FILE', 'TMPL_QCUBE', 'TMPL_UCUBE', 'PSF_CUBE', 'TMPL_PSF_CUBE'],
                                       input_files, files_exist):
-            logging.error('%12s  %30s  %r', par.ljust(12), fname.ljust(30), exists)
-        logging.error('-----------------------------------------------------')
+            logging.error('%14s  %30s  %r', par.ljust(14), fname.ljust(30), exists)
+        logging.error('-------------------------------------------------------')
         return -1
 
     qname = args.qcube[0]
@@ -429,6 +444,8 @@ def main(argv):
                 frequencyname = frequencyname,
                 qtemplate     = args.template_qcube,
                 utemplate     = args.template_ucube,
+                psf_cube      = args.psf_cube,
+                template_psf_cube = args.template_psf_cube,
                 output_dir    = args.output,
                 low_phi       = low,
                 high_phi      = high,
@@ -465,6 +482,25 @@ def main(argv):
                 bad_frames=ignore_frames)
         rmsf = compute_rmsf(frequencies, phi)
         write_rmsf(phi, rmsf, args.output)
+        if args.psf_cube:
+            mean_psf(args.psf_cube, frequencies,
+                     output_fits_name = os.path.join(args.output, 'mean_psf.fits'),
+                     force_overwrite=args.force,
+                     max_mem_gb=args.maxmem,
+                     bad_frames=ignore_frames)
+        if args.template_psf_cube:
+            mean_psf(args.template_psf_cube, frequencies,
+                     output_fits_name=os.path.join(args.output, 'mean_template_psf.fits'),
+                     force_overwrite=args.force,
+                     max_mem_gb=args.maxmem,
+                     bad_frames=ignore_frames)
+        if args.psf_cube and args.template_psf_cube:
+            mean_psf_product(args.psf_cube, args.template_psf_cube,
+                             frequencies,
+                             output_fits_name=os.path.join(args.output, 'mean_psf_product.fits'),
+                             force_overwrite=args.force,
+                             max_mem_gb=args.maxmem,
+                             bad_frames=ignore_frames)
     return 0
 
 
