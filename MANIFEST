@@ -53,10 +53,16 @@ doc/build/html/_static/up.png
 doc/build/html/_static/websupport.js
 doc/rmsynthesis/__init__.py
 doc/rmsynthesis/__init__.pyc
+doc/rmsynthesis/analysis.py
+doc/rmsynthesis/analysis.pyc
+doc/rmsynthesis/analysis.py~
 doc/rmsynthesis/fits.py
 doc/rmsynthesis/fits.pyc
 doc/rmsynthesis/main.py
 doc/rmsynthesis/main.pyc
+doc/rmsynthesis/__pycache__/__init__.cpython-34.pyc
+doc/rmsynthesis/__pycache__/fits.cpython-34.pyc
+doc/rmsynthesis/__pycache__/main.cpython-34.pyc
 doc/source/apidoc.rst
 doc/source/conf.py
 doc/source/index.rst
@@ -83,6 +89,7 @@ doc/testdata/loose-files/stokes_u/L25085_SB155_uv_M_DPPP_1_1.fits
 doc/testdata/loose-files/stokes_u/L25085_SB165_uv_M_DPPP_1_1.fits
 doc/testdata/loose-files/stokes_u/L25085_SB175_uv_M_DPPP_1_1.fits
 rmsynthesis/__init__.py
+rmsynthesis/analysis.py
 rmsynthesis/fits.py
 rmsynthesis/main.py
 test/testrmsynthesismain.py
