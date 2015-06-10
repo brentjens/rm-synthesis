@@ -1,7 +1,11 @@
 import os, unittest, shutil
 from rmsynthesis.main import *
 import rmsynthesis.fits as fits
-import pyfits
+
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 
 from numpy import arange, complex128, exp, float32, newaxis, ones, pi
 

@@ -3,7 +3,14 @@ A collection of small utilities to interface with ``pyfits``.
 '''
 
 from numpy import fromfile, product #pylint: disable=no-name-in-module
-import pyfits, os, sys, logging
+try:
+    import astropy.io.fits as pyfits
+    from astropy.io.fits import StreamingHDU
+except ImportError:
+    import pyfits
+    from pyfits.core import StreamingHDU
+
+import os, sys, logging
 
 
 def get_header(fits_name):
@@ -208,7 +215,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
 
     **Returns**
 
-    A ``pyfits.core.StreamingHDU`` instance.
+    A ``astropy.io.fits.StreamingHDU`` instance.
 
     **Raises**
 
@@ -270,7 +277,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
         else:
             raise IOError('%s already exists and is not overwritten.' %
                           fits_name)
-    return pyfits.core.StreamingHDU(fits_name, fits_header)
+    return StreamingHDU(fits_name, fits_header)
 
 
 def write_cube(fits_name, fits_header, data, force_overwrite=False):
@@ -324,6 +331,7 @@ def write_cube(fits_name, fits_header, data, force_overwrite=False):
     >>> import time
     >>> current_time = time.time()
     >>> write_cube(fits_name, hdr, data, force_overwrite = True)
+    WARNING: Overwriting existing file 'testdata/write_cube_output.fits'. [astropy.io.fits.file]
     >>> os.path.exists(fits_name)
     True
     >>> os.stat(fits_name).st_size

@@ -6,7 +6,7 @@ setup(name='rmsynthesis',
       author='Michiel Brentjens',
       author_email='brentjens@astron.nl',
       url='http://www.astron.nl/~brentjens/',
-      requires=['numpy', 'pyfits'],
+      requires=['numpy', 'astropy'],
       packages=['rmsynthesis'],
       scripts=['bin/rmsynthesis'],
      )
