@@ -56,6 +56,8 @@ def get_header(fits_name):
     >>> get_header('testdata/non-existent.fits')
     Traceback (most recent call last):
     ...
+    FileNotFoundError: [Errno 2] No such file or directory: 'testdata/non-existent.fits'
+
     IOError: File does not exist: 'testdata/non-existent.fits'
     '''
     return pyfits.getheader(fits_name)
@@ -76,7 +78,7 @@ def get_header_data(fits_name):
 
     **Raises**
 
-    IOError
+    FileNotFoundError
         If ``fits_name`` cannot be opened.
 
     **Example**
@@ -99,6 +101,8 @@ def get_header_data(fits_name):
     >>> get_header_data('testdata/non-existent.fits')
     Traceback (most recent call last):
     ...
+    FileNotFoundError: [Errno 2] No such file or directory: 'testdata/non-existent.fits'
+
     IOError: File does not exist: 'testdata/non-existent.fits'
 
     '''
@@ -219,7 +223,7 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
 
     **Raises**
 
-    IOError
+    OSError
         If output file exists and ``force_overwrite`` is ``False``
 
     **Example**
@@ -249,6 +253,8 @@ def streaming_output_hdu(fits_name, fits_header, force_overwrite):
     >>> shdu  = streaming_output_hdu(fits_name, hdr, force_overwrite = False)
     Traceback (most recent call last):
     ...
+    OSError: testdata/partial_output.fits already exists and is not overwritten.
+
     IOError: testdata/partial_output.fits already exists and is not overwritten.
 
     Let's try that again:
@@ -326,12 +332,11 @@ def write_cube(fits_name, fits_header, data, force_overwrite=False):
     >>> write_cube(fits_name, hdr, data)
     Traceback (most recent call last):
     ...
-    IOError: File 'testdata/write_cube_output.fits' already exists.
+    OSError: File 'testdata/write_cube_output.fits' already exists.
 
     >>> import time
     >>> current_time = time.time()
     >>> write_cube(fits_name, hdr, data, force_overwrite = True)
-    WARNING: Overwriting existing file 'testdata/write_cube_output.fits'. [astropy.io.fits.file]
     >>> os.path.exists(fits_name)
     True
     >>> os.stat(fits_name).st_size

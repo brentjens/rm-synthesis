@@ -162,11 +162,11 @@ def phases_lambda2_to_phi(wavelength_squared_m2, phi_rad_m2):
     True
     >>> almost_equal(phases_lambda2_to_phi(pi/2, 0.5), -1.j)
     True
-    >>> map(almost_equal,
-    ...     phases_lambda2_to_phi(array([pi, 0.5*pi]), 0.5), [-1., -1.j])
+    >>> list(map(almost_equal,
+    ...      phases_lambda2_to_phi(array([pi, 0.5*pi]), 0.5), [-1., -1.j]))
     [True, True]
-    >>> map(almost_equal,
-    ... phases_lambda2_to_phi(pi, array([0.5, -0.25])), [-1., +1.j])
+    >>> list(map(almost_equal,
+    ...          phases_lambda2_to_phi(pi, array([0.5, -0.25])), [-1., +1.j]))
     [True, True]
 
     '''

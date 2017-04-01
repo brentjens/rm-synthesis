@@ -1,5 +1,9 @@
 import logging
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
+
 from numpy import array, exp, zeros, float32, float64, complex64, newaxis
 import rmsynthesis.fits as fits
 from rmsynthesis.main import wavelength_squared_m2_from_freq_hz, output_pqu_headers
