@@ -1,4 +1,4 @@
-import os, unittest, shutil
+import os, unittest, shutil, sys
 from rmsynthesis.main import *
 import rmsynthesis.fits as fits
 
@@ -100,8 +100,12 @@ class RmSynthesisTest(unittest.TestCase):
 
 
     def test_write_rmcube(self):
-        output_dir = os.tempnam()
-        os.mkdir(output_dir)
+        if sys.version_info.major < 3:
+            output_dir = os.tempnam()
+            os.mkdir(output_dir)
+        else:
+            import tempfile
+            output_dir = tempfile.mkdtemp()
         try:
             header_out = pyfits.Header()
             header_out.set('SIMPLE', True)
@@ -148,15 +152,19 @@ class RmSynthesisTest(unittest.TestCase):
  
 
     def test_write_rmsf(self):
-        output_dir = os.tempnam()
-        os.mkdir(output_dir)
+        if sys.version_info.major < 3:
+            output_dir = os.tempnam()
+            os.mkdir(output_dir)
+        else:
+            import tempfile
+            output_dir = tempfile.mkdtemp()
         try:
             rmsf  = compute_rmsf(self.freq, self.phi)
             fname = os.path.join(output_dir, 'rmsf.txt')
             write_rmsf(self.phi, rmsf, output_dir)
             self.assertTrue(os.path.exists(fname))
             lines    = open(fname).readlines()
-            contents = array([map(float, l.split()) for l in lines])
+            contents = array([[float(x) for x in  l.split()] for l in lines])
             phi_in   = contents[:, 0]
             rmsf_in  = contents[:, 1]+1j*contents[:, 2]
 

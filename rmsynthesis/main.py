@@ -530,6 +530,7 @@ def write_rmsf(phi, rmsf, output_dir):
     for phi, f_phi in zip(phi, rmsf):
         rmsf_out.write('%10.4f  %10.4f %10.4f\n' %
                        (phi, real(f_phi), imag(f_phi)))
+    rmsf_out.flush()
     rmsf_out.close()
 
 
