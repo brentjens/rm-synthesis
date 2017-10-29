@@ -336,12 +336,13 @@ def write_cube(fits_name, fits_header, data, force_overwrite=False):
 
     >>> import time
     >>> current_time = time.time()
+    >>> _=[_ for i in range(100000)]
     >>> write_cube(fits_name, hdr, data, force_overwrite = True)
     >>> os.path.exists(fits_name)
     True
     >>> os.stat(fits_name).st_size
     4003200
-    >>> os.stat(fits_name).st_ctime > current_time
+    >>> os.stat(fits_name).st_ctime >= current_time
     True
     >>> os.remove(fits_name)
 

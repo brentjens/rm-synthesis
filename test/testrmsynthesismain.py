@@ -78,11 +78,11 @@ class RmSynthesisTest(unittest.TestCase):
 
     def test_add_phi_to_fits_header(self):
         head = pyfits.Header()
-        head.update('SIMPLE', True)
-        head.update('BITPIX', -32)
-        head.update('NAXIS', 3)
-        head.update('NAXIS1', 1)
-        head.update('NAXIS2', 1)
+        head.set('SIMPLE', True)
+        head.set('BITPIX', -32)
+        head.set('NAXIS', 3)
+        head.set('NAXIS1', 1)
+        head.set('NAXIS2', 1)
 
         head_phi = add_phi_to_fits_header(head, [-10.0, -8.0, -6.0, -4.0, -2.0, 0.0, 2.0, 4.0])
         self.assertEquals(head_phi['NAXIS3'], 8)
@@ -104,12 +104,12 @@ class RmSynthesisTest(unittest.TestCase):
         os.mkdir(output_dir)
         try:
             header_out = pyfits.Header()
-            header_out.update('SIMPLE', True)
-            header_out.update('BITPIX', -32)
-            header_out.update('NAXIS', 3)
-            header_out.update('NAXIS1', 7)
-            header_out.update('NAXIS2', 5)
-            header_out.update('NAXIS3', 10)
+            header_out.set('SIMPLE', True)
+            header_out.set('BITPIX', -32)
+            header_out.set('NAXIS', 3)
+            header_out.set('NAXIS1', 7)
+            header_out.set('NAXIS2', 5)
+            header_out.set('NAXIS3', 10)
 
             rmcube = (3.0-4.0j)*ones((10, 5, 7), dtype = complex128)
             self.assertRaises(IOError,
