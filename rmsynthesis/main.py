@@ -480,12 +480,12 @@ def add_phi_to_fits_header(fits_header, phi_array):
     if len(phi_array) < 2:
         raise ShapeError('RM cube should have two or more frames to be a cube')
     fhdr = fits_header.copy()
-    fhdr.update('NAXIS3', len(phi_array))
-    fhdr.update('CRPIX3', 1.0)
-    fhdr.update('CRVAL3', phi_array[0])
-    fhdr.update('CDELT3', phi_array[1]-phi_array[0])
-    fhdr.update('CTYPE3', 'FARDEPTH')
-    fhdr.update('CUNIT3', 'RAD/M^2')
+    fhdr.set('NAXIS3', len(phi_array))
+    fhdr.set('CRPIX3', 1.0)
+    fhdr.set('CRVAL3', phi_array[0])
+    fhdr.set('CDELT3', phi_array[1]-phi_array[0])
+    fhdr.set('CTYPE3', 'FARDEPTH')
+    fhdr.set('CUNIT3', 'RAD/M^2')
     return fhdr
 
 
@@ -505,19 +505,19 @@ def write_rmcube(rmcube, fits_header, output_dir, force_overwrite=False):
     output files will be overwritten.
     '''
     fhp = fits_header.copy()
-    fhp.update('POL', 'P')
+    fhp.set('POL', 'P')
     fits.write_cube(os.path.join(output_dir, 'p-rmcube-dirty.fits'),
                     fhp, absolute(rmcube),
                     force_overwrite=force_overwrite)
 
     fhq = fits_header.copy()
-    fhq.update('POL', 'Q')
+    fhq.set('POL', 'Q')
     fits.write_cube(os.path.join(output_dir, 'q-rmcube-dirty.fits'),
                     fhq, rmcube.real,
                     force_overwrite=force_overwrite)
 
     fhu = fits_header.copy()
-    fhu.update('POL', 'U')
+    fhu.set('POL', 'U')
     fits.write_cube(os.path.join(output_dir, 'u-rmcube-dirty.fits'),
                     fhu, rmcube.imag,
                     force_overwrite=force_overwrite)
@@ -544,16 +544,16 @@ def output_pqu_headers(fits_header):
     r'''
     '''
     p_hdr = fits_header.copy()
-    p_hdr.update('POL', 'P')
-    p_hdr.update('BITPIX', -32)
+    p_hdr.set('POL', 'P')
+    p_hdr.set('BITPIX', -32)
 
     q_hdr = fits_header.copy()
-    q_hdr.update('POL', 'Q')
-    q_hdr.update('BITPIX', -32)
+    q_hdr.set('POL', 'Q')
+    q_hdr.set('BITPIX', -32)
 
     u_hdr = fits_header.copy()
-    u_hdr.update('POL', 'U')
-    u_hdr.update('BITPIX', -32)
+    u_hdr.set('POL', 'U')
+    u_hdr.set('BITPIX', -32)
 
     return  p_hdr, q_hdr, u_hdr
 
