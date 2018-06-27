@@ -176,7 +176,7 @@ def image_frames(fits_name):
 
     '''
     header = get_header(fits_name)
-    dtype = pyfits.hdu.PrimaryHDU.NumCode[header['BITPIX']]
+    dtype = pyfits.BITPIX2DTYPE[header['BITPIX']]
     shape = (header['NAXIS2'], header['NAXIS1'])
     frame_size = product(shape)*abs(header['BITPIX']/8)
 
@@ -352,5 +352,5 @@ def write_cube(fits_name, fits_header, data, force_overwrite=False):
     hdu.data = data
     hdulist = pyfits.HDUList()
     hdulist.append(hdu)
-    hdulist.writeto(fits_name, clobber=force_overwrite)
+    hdulist.writeto(fits_name, overwrite=force_overwrite)
     hdulist.close()

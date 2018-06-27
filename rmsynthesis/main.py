@@ -123,11 +123,11 @@ def wavelength_squared_m2_from_freq_hz(freq_hz): #pylint: disable=invalid-name
     >>> wavelength_squared_m2_from_freq_hz(c)
     1.0
     >>> wavelength_squared_m2_from_freq_hz(array([c, c/2.0, c/3.0]))
-    array([ 1.,  4.,  9.])
+    array([1., 4., 9.])
     >>> wavelength_squared_m2_from_freq_hz(array([[c], [c/2.0], [c/3.0]]))
-    array([[ 1.],
-           [ 4.],
-           [ 9.]])
+    array([[1.],
+           [4.],
+           [9.]])
     >>> wavelength_squared_m2_from_freq_hz(array([]))
     array([], dtype=float64)
 
