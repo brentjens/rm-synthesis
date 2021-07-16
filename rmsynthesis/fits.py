@@ -4,7 +4,7 @@ A collection of small utilities to interface with ``pyfits``.
 
 from numpy import fromfile, product #pylint: disable=no-name-in-module
 try:
-    import astropy.io.fits as pyfits
+    from astropy.io import fits as pyfits
     from astropy.io.fits import StreamingHDU
 except ImportError:
     import pyfits
