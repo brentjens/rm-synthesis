@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 from rmsynthesis.main import __version__
 setup(name='rmsynthesis',
       version=__version__,
